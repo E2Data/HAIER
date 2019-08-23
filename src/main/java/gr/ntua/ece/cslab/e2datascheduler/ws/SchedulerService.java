@@ -5,7 +5,7 @@ import gr.ntua.ece.cslab.e2datascheduler.beans.SubmittedTask;
 import gr.ntua.ece.cslab.e2datascheduler.beans.graph.ScheduledGraphNode;
 import gr.ntua.ece.cslab.e2datascheduler.beans.optpolicy.OptimizationPolicy;
 import gr.ntua.ece.cslab.e2datascheduler.beans.graph.ExecutionGraph;
-import gr.ntua.ece.cslab.e2datascheduler.beans.graph.JobGraph;
+import gr.ntua.ece.cslab.e2datascheduler.beans.graph.ToyJobGraph;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -42,7 +42,7 @@ public class SchedulerService extends AbstractE2DataService {
         logger.info(inputTask.getPolicy().getObjectives()[0].getName());
 
         OptimizationPolicy policy = inputTask.getPolicy();
-        JobGraph inputGraph = inputTask.getJobgraph();
+        ToyJobGraph inputGraph = inputTask.getJobgraph();
 
         logger.info(inputGraph.toString());
         inputGraph.index();

@@ -1,7 +1,7 @@
 package gr.ntua.ece.cslab.e2datascheduler.beans;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import gr.ntua.ece.cslab.e2datascheduler.beans.graph.JobGraph;
+import gr.ntua.ece.cslab.e2datascheduler.beans.graph.ToyJobGraph;
 import gr.ntua.ece.cslab.e2datascheduler.beans.optpolicy.OptimizationPolicy;
 
 import java.io.IOException;
@@ -27,10 +27,10 @@ import java.io.IOException;
 
 public class SubmittedTask {
 
-    private JobGraph jobgraph;
+    private ToyJobGraph jobgraph;
     private OptimizationPolicy policy;
 
-    public JobGraph getJobgraph() {
+    public ToyJobGraph getJobgraph() {
         return jobgraph;
     }
 

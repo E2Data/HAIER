@@ -1,7 +1,7 @@
 package gr.ntua.ece.cslab.e2datascheduler;
 
 import gr.ntua.ece.cslab.e2datascheduler.beans.graph.ExecutionGraph;
-import gr.ntua.ece.cslab.e2datascheduler.beans.graph.JobGraph;
+import gr.ntua.ece.cslab.e2datascheduler.beans.graph.ToyJobGraph;
 import gr.ntua.ece.cslab.e2datascheduler.beans.optpolicy.OptimizationPolicy;
 import gr.ntua.ece.cslab.e2datascheduler.ml.Model;
 import gr.ntua.ece.cslab.e2datascheduler.ml.ModelLibrary;
@@ -57,7 +57,7 @@ public class E2dScheduler {
         return scheduler;
     }
 
-    public ExecutionGraph schedule(JobGraph indexedGraph, OptimizationPolicy policy) {
+    public ExecutionGraph schedule(ToyJobGraph indexedGraph, OptimizationPolicy policy) {
         Model selectedModel = null;
         if(policy.getMlModel() == null || !models.containsKey(policy.getMlModel())){
             selectedModel = models.get(DEFAULT_MODEL);

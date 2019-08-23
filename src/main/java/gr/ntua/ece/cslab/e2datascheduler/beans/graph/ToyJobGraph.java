@@ -8,7 +8,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /*
- * Sample JobGraph JSON
+ * Sample ToyJobGraph JSON
  *
 
      {"graph": [
@@ -27,7 +27,7 @@ import java.util.Map;
 /**
  * Object describing the input of a scheduling job in the form of a graph
  */
-public class JobGraph {
+public class ToyJobGraph {
 
     /**
      * An ArrayList representation of the graph.

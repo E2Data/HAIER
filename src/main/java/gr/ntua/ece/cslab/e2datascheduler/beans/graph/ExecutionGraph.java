@@ -12,7 +12,7 @@ import java.util.Queue;
  *  A graph that represents the output of the scheduling process and is ready
  *  for execution
  */
-public class ExecutionGraph extends JobGraph {
+public class ExecutionGraph extends ToyJobGraph {
 
     /**
      * An ArrayList representation of the graph.
@@ -200,7 +200,7 @@ public class ExecutionGraph extends JobGraph {
 //            }
 //            for (GraphNode child : node.getChildren()) {
 //                //XXX(ckatsak): We assume that GraphNode.ID is the same as the
-//                // node's index in JobGraph, hence in the ExecutionGraph too.
+//                // node's index in ToyJobGraph, hence in the ExecutionGraph too.
 //                node.addParent(executionGraph.get(child.getId()));
 //            }
 //        }

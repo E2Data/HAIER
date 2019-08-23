@@ -4,7 +4,7 @@ import gr.ntua.ece.cslab.e2datascheduler.beans.cluster.ClusterNode;
 import gr.ntua.ece.cslab.e2datascheduler.beans.cluster.HwResource;
 import gr.ntua.ece.cslab.e2datascheduler.beans.cluster.YarnCluster;
 import gr.ntua.ece.cslab.e2datascheduler.beans.graph.ExecutionGraph;
-import gr.ntua.ece.cslab.e2datascheduler.beans.graph.JobGraph;
+import gr.ntua.ece.cslab.e2datascheduler.beans.graph.ToyJobGraph;
 import gr.ntua.ece.cslab.e2datascheduler.beans.optpolicy.Objective;
 import gr.ntua.ece.cslab.e2datascheduler.beans.optpolicy.OptimizationPolicy;
 import gr.ntua.ece.cslab.e2datascheduler.ml.Model;
@@ -70,7 +70,7 @@ public class NSGAIIOptimizer implements Optimizer {
     }
 
 
-    public ExecutionGraph optimize(JobGraph graph, OptimizationPolicy policy, Model mlModel) {
+    public ExecutionGraph optimize(ToyJobGraph graph, OptimizationPolicy policy, Model mlModel) {
         // Begin by initializing problem-independent parameters for NSGA-II.
 
         // Then, properly initialize problem-specific parameters for NSGA-II execution.

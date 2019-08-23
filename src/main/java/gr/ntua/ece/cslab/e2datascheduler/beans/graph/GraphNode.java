@@ -9,7 +9,7 @@ import java.util.List;
  * Bean that describes a node of the input graph
  *
  * !!! This class is only for development and testing purposes !!!
- * Eventually, the JobGraph struct of Apache Flink is going to be used.
+ * Eventually, the ToyJobGraph struct of Apache Flink is going to be used.
  */
 public class GraphNode {
 
