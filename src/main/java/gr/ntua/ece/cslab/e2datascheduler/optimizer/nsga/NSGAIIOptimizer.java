@@ -77,18 +77,32 @@ public class NSGAIIOptimizer implements Optimizer {
 
         // (gmytil) each time we get an optimization request, we have to obtain a fresh view
         // of the available cluster resources.
-        YarnCluster cluster = YarnCluster.getInstance();
-        if(cluster != null) {
-            devices.clear();
+/*
+		YarnCluster cluster = YarnCluster.getInstance();
+		if(cluster != null) {
+		    devices.clear();
 
-            for (ClusterNode node : cluster.getNodes()) {
-                ArrayList<HwResource>  availableResources = node.getAvailableResources();
-                for (HwResource r : availableResources) {
-                    devices.add(r);
-                }
+		    for (ClusterNode node : cluster.getNodes()) {
+			ArrayList<HwResource>  availableResources = node.getAvailableResources();
+			for (HwResource r : availableResources) {
+			    devices.add(r);
+			}
 
-            }
-        } //FIXME: what is the expected behavior if I cannot get fresh status from the cluster?
+		    }
+		} //FIXME: what is the expected behavior if I cannot get fresh status from the cluster?
+*/
+        //  vv  FIXME(ckatsak)  vv
+        // Yarn workaround -- hard-coding devices
+        HwResource r = new HwResource();
+        r.setHost("silver1");
+        devices.add(r);
+        r = new HwResource();
+        r.setHost("gold1");
+        devices.add(r);
+        r = new HwResource();
+        r.setHost("gold2");
+        devices.add(r);
+        //  ^^  FIXME(ckatsak)  ^^
 
         NSGAIIPlanning.devices = devices;
         NSGAIIPlanning.mlModel = mlModel;
