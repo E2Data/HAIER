@@ -58,6 +58,13 @@
             <version>${jersey2.version}</version>
         </dependency>
 
+        <!-- NOTE(ckatsak): This lets us use multipart features (for JobGraph file uploading) -->
+        <dependency>
+            <groupId>org.glassfish.jersey.media</groupId>
+            <artifactId>jersey-media-multipart</artifactId>
+            <version>${jersey2.version}</version>
+        </dependency>
+
         <!-- https://mvnrepository.com/artifact/org.moeaframework/moeaframework -->
         <dependency>
             <groupId>org.moeaframework</groupId>
