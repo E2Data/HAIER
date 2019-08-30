@@ -7,6 +7,8 @@ import gr.ntua.ece.cslab.e2datascheduler.beans.optpolicy.OptimizationPolicy;
 import gr.ntua.ece.cslab.e2datascheduler.beans.graph.ExecutionGraph;
 import gr.ntua.ece.cslab.e2datascheduler.beans.graph.ToyJobGraph;
 
+import org.apache.flink.runtime.jobgraph.JobGraph;
+
 import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
 import org.glassfish.jersey.media.multipart.FormDataParam;
 
@@ -21,7 +23,9 @@ import javax.ws.rs.core.Response;
 import java.util.logging.Logger;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.ObjectInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -94,10 +98,18 @@ public class SchedulerService extends AbstractE2DataService {
             return generateResponse(Response.Status.INTERNAL_SERVER_ERROR, "Error uploading JobGraph file '" + fileDetail.getFileName() + "'.");
         }
 
-        try {
-            // TODO(ckatsak): deserialize
+        JobGraph jobGraph = null;
+        try (ObjectInputStream objectIn = new ObjectInputStream(new FileInputStream(filePath))) {
+            jobGraph = (JobGraph) objectIn.readObject();
+            logger.info("Deserialized '" + jobGraph + "' from file '" + filePath + "'.");
+        } catch (Exception e) {
+            logger.warning("Error deserializing JobGraph from file '" + filePath + "': " + e.getMessage());
+            e.printStackTrace();
+            return generateResponse(Response.Status.INTERNAL_SERVER_ERROR, "Error deserializing JobGraph from file '" + fileDetail.getFileName() + "'.");
         } finally {
-            // TODO(ckatsak): delete temporarily stored jobgraph file
+            if (!new File(filePath).delete()) {
+                logger.warning("Error unlinking JobGraph file '" + filePath + "'.");
+            }
         }
 
         // TODO(ckatsak): schedule

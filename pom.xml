@@ -109,6 +109,14 @@
         </dependency>
 
 
+        <!-- https://mvnrepository.com/artifact/org.apache.flink/flink-runtime -->
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-runtime_2.12</artifactId>
+            <version>1.7.1</version>
+            <scope>compile</scope>
+        </dependency>
+
 
     </dependencies>
 
