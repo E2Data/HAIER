@@ -90,12 +90,12 @@ public class SchedulerService extends AbstractE2DataService {
         final String filePath = this.tmpRootPath + fileDetail.getFileName();
 
         try {
-            this.storeSerializedJobGraphFile(uploadedInputStream, filePath);
-            logger.info("JobGraph file '" + fileDetail.getFileName() + "' has been uploaded successfully; stored as '" + filePath + "'.");
+            SchedulerService.persistSerializedJobGraphFile(uploadedInputStream, filePath);
+            logger.info("JobGraph file '" + fileDetail.getFileName() + "' has been uploaded successfully and stored in '" + filePath + "'.");
         } catch (IOException e) {
-            logger.warning("Error uploading JobGraph file '" + fileDetail.getFileName() + "'");
+            logger.warning("Error retrieving JobGraph file '" + fileDetail.getFileName() + "':" + e.getMessage());
             e.printStackTrace();
-            return generateResponse(Response.Status.INTERNAL_SERVER_ERROR, "Error uploading JobGraph file '" + fileDetail.getFileName() + "'.");
+            return generateResponse(Response.Status.INTERNAL_SERVER_ERROR, "Error retrieving JobGraph file '" + fileDetail.getFileName() + "'.");
         }
 
         JobGraph jobGraph = null;
@@ -117,9 +117,9 @@ public class SchedulerService extends AbstractE2DataService {
         return generateResponse(Response.Status.OK, "File '" + fileDetail.getFileName() + "' has been uploaded successfully!");
     }
 
-    private void storeSerializedJobGraphFile(final InputStream uploadedInputStream, final String filePath) throws IOException {
+    private static void persistSerializedJobGraphFile(final InputStream uploadedInputStream, final String filePath) throws IOException {
         final FileOutputStream out = new FileOutputStream(new File(filePath));
-        final byte[] bytes = new byte[8192];  // FIXME(ckatsak): looks ugly
+        final byte[] bytes = new byte[8192];  // FIXME(ckatsak): looks dirty; is it optimal?
         int read = 0;
         while ((read = uploadedInputStream.read(bytes)) != -1) {
             //logger.info("Just read " + read + " bytes from the file being uploaded.");
