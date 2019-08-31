@@ -99,7 +99,7 @@ public class SchedulerService extends AbstractE2DataService {
         }
 
         JobGraph jobGraph = null;
-        try (ObjectInputStream objectIn = new ObjectInputStream(new FileInputStream(filePath))) {
+        try (final ObjectInputStream objectIn = new ObjectInputStream(new FileInputStream(filePath))) {
             jobGraph = (JobGraph) objectIn.readObject();
             logger.info("Deserialized '" + jobGraph + "' from file '" + filePath + "'.");
         } catch (Exception e) {
