@@ -3,7 +3,7 @@ package gr.ntua.ece.cslab.e2datascheduler.optimizer.nsga;
 import gr.ntua.ece.cslab.e2datascheduler.beans.cluster.HwResource;
 import gr.ntua.ece.cslab.e2datascheduler.beans.graph.ExecutionGraph;
 import gr.ntua.ece.cslab.e2datascheduler.beans.graph.GraphNode;
-import gr.ntua.ece.cslab.e2datascheduler.beans.graph.JobGraph;
+import gr.ntua.ece.cslab.e2datascheduler.beans.graph.ToyJobGraph;
 import gr.ntua.ece.cslab.e2datascheduler.beans.graph.Layer;
 import gr.ntua.ece.cslab.e2datascheduler.beans.graph.ScheduledGraphNode;
 import gr.ntua.ece.cslab.e2datascheduler.ml.Model;
@@ -26,9 +26,9 @@ import java.util.Map;
 public class NSGAIIPlanning extends AbstractProblem {
 
     /**
-     * The input JobGraph.
+     * The input ToyJobGraph.
      */
-    public static JobGraph tasks;
+    public static ToyJobGraph tasks;
     //public static Map<Integer, GraphNode> tasks;
 
     /**

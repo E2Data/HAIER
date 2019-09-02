@@ -1,9 +1,11 @@
 package gr.ntua.ece.cslab.e2datascheduler.beans.optpolicy;
 
+import gr.ntua.ece.cslab.e2datascheduler.beans.graph.ExecutionGraph;
+import gr.ntua.ece.cslab.e2datascheduler.graph.FlinkExecutionGraph;
+
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
-import gr.ntua.ece.cslab.e2datascheduler.beans.graph.ExecutionGraph;
 
 import java.util.List;
 
@@ -45,6 +47,10 @@ public class OptimizationPolicy {
         this.objectives = objectives;
     }
 
+    public int getNumberOfObjectives() {
+        return objectives.length;
+    }
+
     public String getMlModel() {
         return mlModel;
     }
@@ -59,6 +65,17 @@ public class OptimizationPolicy {
         return paretoExecutionGraphs.get(0);
     }
 
+    /**
+     * Provided a set of Pareto-optimal solutions for the objectives in hand by
+     * an Optimizer, this method picks which FlinkExecutionGraph to finally
+     * respond with.
+     */
+    public FlinkExecutionGraph pickFlinkExecutionGraph(List<FlinkExecutionGraph> paretoFlinkExecutionGraphs) {
+        // FIXME(ckatsak): THIS IS A STUB
+        return paretoFlinkExecutionGraphs.get(0);
+    }
+
+    // --------------------------------------------------------------------------------------------
 
     /**
      * Deserializes an optimization policy JSON

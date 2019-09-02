@@ -3,12 +3,13 @@ package gr.ntua.ece.cslab.e2datascheduler.optimizer.nsga;
 import gr.ntua.ece.cslab.e2datascheduler.beans.cluster.ClusterNode;
 import gr.ntua.ece.cslab.e2datascheduler.beans.cluster.HwResource;
 import gr.ntua.ece.cslab.e2datascheduler.beans.cluster.YarnCluster;
-import gr.ntua.ece.cslab.e2datascheduler.beans.graph.ExecutionGraph;
-import gr.ntua.ece.cslab.e2datascheduler.beans.graph.ToyJobGraph;
 import gr.ntua.ece.cslab.e2datascheduler.beans.optpolicy.Objective;
 import gr.ntua.ece.cslab.e2datascheduler.beans.optpolicy.OptimizationPolicy;
+import gr.ntua.ece.cslab.e2datascheduler.graph.FlinkExecutionGraph;
 import gr.ntua.ece.cslab.e2datascheduler.ml.Model;
 import gr.ntua.ece.cslab.e2datascheduler.optimizer.Optimizer;
+
+import org.apache.flink.runtime.jobgraph.JobGraph;
 
 import org.moeaframework.Executor;
 import org.moeaframework.core.NondominatedPopulation;
@@ -20,7 +21,7 @@ import java.util.*;
 /**
  * Implementation of the NSGAII optimizer
  */
-public class NSGAIIOptimizer implements Optimizer {
+public class NSGAIIFlinkOptimizer {  //FIXME(ckatsak): implements Optimizer ?
 
     public static ResourceBundle resourceBundle = ResourceBundle.getBundle("config");
 
@@ -28,25 +29,18 @@ public class NSGAIIOptimizer implements Optimizer {
     private int numGenerations = Integer.parseInt(resourceBundle.getString("optimizer.maxGenerations"));
 
     /**
-     * A list of the available devices to assign the tasks on.
+     * A list of the available devices to assign the tasks (JobVertices) on.
      */
     private List<HwResource> devices;
 
-    /**
-     * It stores all solutions found for the most recent call to method {@code
-     * optimize}.
-     * Declaring it local to method {@code optimize} would suffice, but it is
-     * declared as a (package-scoped) class field to facilitate plotting during
-     * testing.
-     */
-    Map<Solution, ExecutionGraph> solutionGraphs;
+    // --------------------------------------------------------------------------------------------
 
-    public NSGAIIOptimizer(){
+    public NSGAIIFlinkOptimizer() {
         devices = new ArrayList<>();
     }
 
     public int getMaxParetoPlans() {
-        return maxParetoPlans;
+        return this.maxParetoPlans;
     }
 
     public void setMaxParetoPlans(int maxParetoPlans) {
@@ -54,7 +48,7 @@ public class NSGAIIOptimizer implements Optimizer {
     }
 
     public int getNumGenerations() {
-        return numGenerations;
+        return this.numGenerations;
     }
 
     public void setNumGenerations(int numGenerations) {
@@ -62,19 +56,16 @@ public class NSGAIIOptimizer implements Optimizer {
     }
 
     public List<HwResource> getDevices() {
-        return devices;
+        return this.devices;
     }
 
     public void setDevices(List<HwResource> devices) {
         this.devices = devices;
     }
 
+    // --------------------------------------------------------------------------------------------
 
-    public ExecutionGraph optimize(ToyJobGraph graph, OptimizationPolicy policy, Model mlModel) {
-        // Begin by initializing problem-independent parameters for NSGA-II.
-
-        // Then, properly initialize problem-specific parameters for NSGA-II execution.
-
+    public FlinkExecutionGraph optimize(final JobGraph flinkJobGraph, final OptimizationPolicy policy, final Model mlModel) {
         // (gmytil) each time we get an optimization request, we have to obtain a fresh view
         // of the available cluster resources.
 /*
@@ -104,37 +95,25 @@ public class NSGAIIOptimizer implements Optimizer {
         devices.add(r);
         //  ^^  FIXME(ckatsak)  ^^
 
-        NSGAIIPlanning.devices = devices;
-        NSGAIIPlanning.mlModel = mlModel;
 
-        //Map<Solution, ExecutionGraph> solutionGraphs = new HashMap<>();
-        this.solutionGraphs = new HashMap<>();
-        NSGAIIPlanning.solutionGraphs = solutionGraphs;
-
-        NSGAIIPlanning.objectives = new HashMap<String, Integer>();
-        int objectiveId = 0;
-        for(Objective obj : policy.getObjectives()){
-            NSGAIIPlanning.objectives.put(obj.getName(), objectiveId);
-            objectiveId++;
-        }
-
-        NSGAIIPlanning.tasks = graph;
+        // Construct the problem.
+        final NSGAIIFlinkPlanning problem = new NSGAIIFlinkPlanning(devices, mlModel, flinkJobGraph, policy);
 
         // Run NSGA-II.
-        NondominatedPopulation result = new Executor()
-                .withProblemClass(NSGAIIPlanning.class)
+        final NondominatedPopulation result = new Executor()
+                .withProblem(problem)
                 .withAlgorithm("NSGAII")
                 .withProperty("populationSize", maxParetoPlans)
                 .withMaxEvaluations(numGenerations)
                 .run();
 
-        // Delegate the final selection of the ExecutionGraph to return, to the
-        // provided OptimizationPolicy object.
-        List<ExecutionGraph> paretoExecutionGraphs = new ArrayList<>(maxParetoPlans);
+        // Delegate the final selection of the FlinkExecutionGraph to return,
+        // to the provided OptimizationPolicy object.
+        final List<FlinkExecutionGraph> paretoFlinkExecutionGraphs = new ArrayList<>(maxParetoPlans);
         for (Solution solution : result) {
-            paretoExecutionGraphs.add(solutionGraphs.get(solution));
+            paretoFlinkExecutionGraphs.add(problem.solutionGraphs.get(solution));
         }
-        return policy.pickExecutionGraph(paretoExecutionGraphs);
+        return policy.pickFlinkExecutionGraph(paretoFlinkExecutionGraphs);
     }
 
 }
