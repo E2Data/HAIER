@@ -2,10 +2,12 @@ package gr.ntua.ece.cslab.e2datascheduler.ws;
 
 import gr.ntua.ece.cslab.e2datascheduler.E2dScheduler;
 import gr.ntua.ece.cslab.e2datascheduler.beans.SubmittedTask;
-import gr.ntua.ece.cslab.e2datascheduler.beans.graph.ScheduledGraphNode;
-import gr.ntua.ece.cslab.e2datascheduler.beans.optpolicy.OptimizationPolicy;
 import gr.ntua.ece.cslab.e2datascheduler.beans.graph.ExecutionGraph;
+import gr.ntua.ece.cslab.e2datascheduler.beans.graph.ScheduledGraphNode;
 import gr.ntua.ece.cslab.e2datascheduler.beans.graph.ToyJobGraph;
+import gr.ntua.ece.cslab.e2datascheduler.beans.optpolicy.OptimizationPolicy;
+import gr.ntua.ece.cslab.e2datascheduler.graph.FlinkExecutionGraph;
+import gr.ntua.ece.cslab.e2datascheduler.graph.ScheduledJobVertex;
 
 import org.apache.flink.runtime.jobgraph.JobGraph;
 
@@ -76,6 +78,7 @@ public class SchedulerService extends AbstractE2DataService {
     @GET
     public Response schedule() {
         String happyMesg = "hello";
+
         return generateResponse(Response.Status.OK, happyMesg);
     }
 
@@ -112,14 +115,23 @@ public class SchedulerService extends AbstractE2DataService {
             }
         }
 
-        // TODO(ckatsak): schedule
+        // FIXME(ckatsak): For now, OptimizationPolicy is hardcoded here instead of being sent by Flink.
+        String policyStr = "{\"policy\": {\"objectives\": [ {\"name\":\"execTime\", \"targetFunction\":\"MIN\", \"combineFunction\":\"MAX\"}, {\"name\":\"powerCons\", \"targetFunction\":\"MIN\", \"combineFunction\":\"SUM\"} ]}}";
 
-        return generateResponse(Response.Status.OK, "File '" + fileDetail.getFileName() + "' has been uploaded successfully!");
+        final FlinkExecutionGraph result = this.scheduler.schedule(jobGraph, OptimizationPolicy.parseJSON(policyStr));
+
+        logger.info("Scheduling result for '" + jobGraph.toString() + "':\n\n");
+        for (ScheduledJobVertex scheduledJobVertex : result.getScheduledJobVertices()) {
+            logger.info(scheduledJobVertex.toString() + "\n\n");
+        }
+        logger.info("End of scheduling result.\n\n");
+
+        return generateResponse(Response.Status.OK, "JobGraph '" + jobGraph.toString() + "' has been scheduled successfully!");
     }
 
     private static void persistSerializedJobGraphFile(final InputStream uploadedInputStream, final String filePath) throws IOException {
         final FileOutputStream out = new FileOutputStream(new File(filePath));
-        final byte[] bytes = new byte[8192];  // FIXME(ckatsak): looks dirty; is it optimal?
+        final byte[] bytes = new byte[8192];  // XXX(ckatsak): looks dirty; is it optimal?
         int read = 0;
         while ((read = uploadedInputStream.read(bytes)) != -1) {
             //logger.info("Just read " + read + " bytes from the file being uploaded.");
