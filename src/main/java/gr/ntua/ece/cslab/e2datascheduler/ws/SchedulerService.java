@@ -115,16 +115,13 @@ public class SchedulerService extends AbstractE2DataService {
             }
         }
 
-        // FIXME(ckatsak): For now, OptimizationPolicy is hardcoded here instead of being sent by Flink.
+        // FIXME(ckatsak): For now, a default OptimizationPolicy object is
+        //                 hardcoded here instead of being sent by Flink.
         String policyStr = "{\"policy\": {\"objectives\": [ {\"name\":\"execTime\", \"targetFunction\":\"MIN\", \"combineFunction\":\"MAX\"}, {\"name\":\"powerCons\", \"targetFunction\":\"MIN\", \"combineFunction\":\"SUM\"} ]}}";
 
         final FlinkExecutionGraph result = this.scheduler.schedule(jobGraph, OptimizationPolicy.parseJSON(policyStr));
 
-        logger.info("Scheduling result for '" + jobGraph.toString() + "':\n\n");
-        for (ScheduledJobVertex scheduledJobVertex : result.getScheduledJobVertices()) {
-            logger.info(scheduledJobVertex.toString() + "\n\n");
-        }
-        logger.info("End of scheduling result.\n\n");
+        logger.info("Scheduling result for '" + jobGraph.toString() + "':\n\n" + result.toString() + "\n\nEnd of scheduling result.\n");
 
         return generateResponse(Response.Status.OK, "JobGraph '" + jobGraph.toString() + "' has been scheduled successfully!");
     }
