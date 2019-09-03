@@ -73,7 +73,7 @@ public class NSGAIIFlinkPlanning extends AbstractProblem {
         this.devices = devices;
         this.mlModel = mlModel;
         this.jobGraph = jobGraph;
-        this.jobVertices = jobGraph.getVerticesAsArray();
+        this.jobVertices = initializeJobVertices(jobGraph);
         this.solutionGraphs = new HashMap<>();
 
         this.objectives = new HashMap<>(policy.getNumberOfObjectives(), 1.0f);
@@ -83,6 +83,24 @@ public class NSGAIIFlinkPlanning extends AbstractProblem {
             objectiveIndex++;
         }
     }
+
+    /**
+     * Auxiliary method to initialize the array of JobVertex objects.
+     *
+     * First, it attempts to retrieve them topologically sorted; if that does
+     * not work well, it falls back to random order.
+     */
+    private JobVertex[] initializeJobVertices(final JobGraph jobGraph) {
+        try {
+            return jobGraph.getVerticesSortedTopologicallyFromSources().toArray(new JobVertex[jobGraph.getNumberOfVertices()]);
+        } catch (Exception e) {
+            System.err.printf("[NSGAIIFlinkPlanning] OOPS! %s\n", e.getMessage());
+            e.printStackTrace();
+            return jobGraph.getVerticesAsArray();
+        }
+    }
+
+    // -------------------------------------------------------------------------------------------
 
     /**
      * This method is automatically invoked by the MOEA framework at each
