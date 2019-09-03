@@ -1,11 +1,14 @@
 package gr.ntua.ece.cslab.e2datascheduler.graph;
 
 import gr.ntua.ece.cslab.e2datascheduler.beans.cluster.HwResource;
+import gr.ntua.ece.cslab.e2datascheduler.beans.graph.JSONableFlinkExecutionGraph;
+import gr.ntua.ece.cslab.e2datascheduler.beans.graph.JSONableScheduledJobVertex;
 
 import org.apache.flink.runtime.jobgraph.IntermediateDataSet;
 import org.apache.flink.runtime.jobgraph.JobEdge;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.JobVertex;
+import org.apache.flink.runtime.jobgraph.JobVertexID;
 
 import com.google.gson.GsonBuilder;
 
@@ -193,11 +196,29 @@ public class FlinkExecutionGraph {
     // --------------------------------------------------------------------------------------------
 
     /**
-     * FIXME(ckatsak)
+     * @return a JSON formatted JSONableFlinkExecutionGraph
      */
     @Override
     public String toString() {
-        return new GsonBuilder().create().toJson(this);
+        JSONableScheduledJobVertex[] vs = new JSONableScheduledJobVertex[this.scheduledJobVertices.size()];
+        for (int i = 0; i < vs.length; i++) {
+            vs[i] = new JSONableScheduledJobVertex();
+            vs[i].setId(this.jobVertices[i].getID());
+            vs[i].setLayer(this.scheduledJobVertices.get(i).getLayer());
+            vs[i].setAssignedResource(this.scheduledJobVertices.get(i).getAssignedResource());
+
+            final List<Integer> childrenIndices = this.scheduledJobVertices.get(i).getChildren();
+            final JobVertexID[] childrenIDs = new JobVertexID[childrenIndices.size()];
+            for (int j = 0; j < childrenIndices.size(); j++) {
+                childrenIDs[j] = this.jobVertices[childrenIndices.get(j)].getID();
+            }
+            vs[i].setChildren(childrenIDs);
+        }
+
+        JSONableFlinkExecutionGraph jfeg = new JSONableFlinkExecutionGraph();
+        jfeg.setJSONableScheduledJobVertices(vs);
+
+        return new GsonBuilder().create().toJson(jfeg);
     }
 
 }
