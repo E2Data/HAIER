@@ -218,7 +218,7 @@ public class FlinkExecutionGraph {
         JSONableFlinkExecutionGraph jfeg = new JSONableFlinkExecutionGraph();
         jfeg.setJSONableScheduledJobVertices(vs);
 
-        return new GsonBuilder().create().toJson(jfeg);
+        return new GsonBuilder().setPrettyPrinting().create().toJson(jfeg);
     }
 
 }
