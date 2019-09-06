@@ -58,8 +58,8 @@ public class DemoModel extends Model {
         //                 now: only the execution time is predicted, but the
         //                 same prediction is returned for power consumption.
         if (!this.predictionCache.containsKey(sourceCode)) {
-            final List<Double> predictions = DemoModel.doPost(sourceCode);
-            this.predictionCache.put(sourceCode, predictions.get(DemoModel.DEVICE_TO_INDEX.get(device.getName())));
+            final Map<String, Double> predictions = DemoModel.doPost(sourceCode);
+            this.predictionCache.put(sourceCode, predictions.get(device.getName()));
         }
         //System.err.println("[DemoModel] Prediction retrieved for '" + device.getName() + "': " + this.predictionCache.get(sourceCode));
 
@@ -68,10 +68,10 @@ public class DemoModel extends Model {
 
     // --------------------------------------------------------------------------------------------
 
-    private static List<Double> doPost(final String sourceCode) {
+    private static Map<String, Double> doPost(final String sourceCode) {
         URL myURL = null;
         HttpURLConnection conn = null;
-        List<Double> ret = new ArrayList<>();
+        Map<String, Double> ret = new HashMap<>();
         try {
             myURL = new URL(DemoModel.MODEL_URL);
             conn = (HttpURLConnection) myURL.openConnection();
@@ -104,7 +104,7 @@ public class DemoModel extends Model {
             }
 
             //System.err.printf("[DemoModel] Model's JSON response:\n\n%s\n\n", jsonResponse.toString());
-            //ret = new Gson().fromJson("[34.2980647, 7.30185255, 16.41673777]", ret.getClass());
+            //ret = new Gson().fromJson("{\"cpu\":34.29806470131643,\"gtx\":7.3018525495080375,\"tesla\":16.416737770578887}", ret.getClass());
             ret = new Gson().fromJson(jsonResponse.toString(), ret.getClass());
         } catch (IOException e) {
             e.printStackTrace();
