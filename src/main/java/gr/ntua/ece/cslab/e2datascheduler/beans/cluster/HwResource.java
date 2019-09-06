@@ -24,6 +24,10 @@ public class HwResource {
         return name;
     }
 
+    public void setName(String name) {
+        this.name = name;
+    }
+
     public String getUnits() {
         return units;
     }

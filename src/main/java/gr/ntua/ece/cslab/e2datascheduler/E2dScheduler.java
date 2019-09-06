@@ -6,6 +6,7 @@ import gr.ntua.ece.cslab.e2datascheduler.beans.optpolicy.OptimizationPolicy;
 import gr.ntua.ece.cslab.e2datascheduler.graph.FlinkExecutionGraph;
 import gr.ntua.ece.cslab.e2datascheduler.ml.Model;
 import gr.ntua.ece.cslab.e2datascheduler.ml.ModelLibrary;
+import gr.ntua.ece.cslab.e2datascheduler.ml.impl.DemoModel;
 import gr.ntua.ece.cslab.e2datascheduler.ml.impl.DummyModel;
 import gr.ntua.ece.cslab.e2datascheduler.optimizer.Optimizer;
 import gr.ntua.ece.cslab.e2datascheduler.optimizer.nsga.NSGAIIOptimizer;
@@ -47,6 +48,12 @@ public class E2dScheduler {
                     models.put(modelName, dummyModel);
                     break;
                 }
+                case "demo": {
+                    Model demoModel = new DemoModel();
+                    demoModel.load(modelPath);
+                    models.put(modelName, demoModel);
+                    break;
+                }
                 //TODO: Add 'case' clauses for supported models
                 default: break;
             }
@@ -76,7 +83,8 @@ public class E2dScheduler {
     public FlinkExecutionGraph schedule(JobGraph jobGraph, OptimizationPolicy policy) {
         Model selectedModel = null;
         if (policy.getMlModel() == null || !this.models.containsKey(policy.getMlModel())) {
-            selectedModel = this.models.get(DEFAULT_MODEL);
+            //selectedModel = this.models.get(DEFAULT_MODEL);
+            selectedModel = new DemoModel();
         } else {
             selectedModel = this.models.get(policy.getMlModel());
         }
