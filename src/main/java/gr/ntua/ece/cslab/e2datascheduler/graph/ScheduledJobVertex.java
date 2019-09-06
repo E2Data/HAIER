@@ -41,6 +41,11 @@ public class ScheduledJobVertex {
     private final String sourceCode;
 
     /**
+     * FIXME(ckatsak):
+     */
+     private static final String kernelsDir = "/home/users/ckatsak/haier_tmp/kernels/";
+
+    /**
      * The hardware resource that the corresponding JobVertex has been assigned
      * on by a HAIER Optimizer.
      */
@@ -59,8 +64,11 @@ public class ScheduledJobVertex {
         this.childJobVertexIndices = childJobVertexIndices;
 
         //this.sourceCode = jobVertex.getSourceCode();  // or equivalent
-        this.sourceCode = "STUB FOR OPENCL KERNEL SOURCE CODE";
+        //this.sourceCode = "STUB FOR OPENCL KERNEL SOURCE CODE";
         // FIXME(ckatsak): ^^ awaiting Flink-Tornado integration's API
+
+        // XXX(ckatsak): Demo
+        this.sourceCode = retrieveSourceCode();
     }
 
     public List<Integer> getChildren() {
@@ -89,6 +97,13 @@ public class ScheduledJobVertex {
 
     public void setLayer(int layer) {
         this.layer = layer;
+    }
+
+    // -------------------------------------------------------------------------------------------
+
+    private String retrieveSourceCode() {
+        //return "STUB FOR OPENCL KERNEL SOURCE CODE";
+        return "__kernel void A(__global float* a, __global float* b, const int c) {const int d = get_global_id(0);int e, f, g, h;unsigned int i, j, k, l;for (unsigned int m = 0; m < k; m++) {for (unsigned int h = 0; h < i; h++) {for (unsigned int i = e; i < c; i++) {for (unsigned int j = a[g]; j < i; ++j) {a[i * c + i] = 0;}b[j] = j;}}}}";
     }
 
     // -------------------------------------------------------------------------------------------

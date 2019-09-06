@@ -86,12 +86,15 @@ public class NSGAIIFlinkOptimizer {  //FIXME(ckatsak): implements Optimizer ?
         // Yarn workaround -- hard-coding devices
         HwResource r = new HwResource();
         r.setHost("silver1");
+        r.setName("cpu");
         devices.add(r);
         r = new HwResource();
         r.setHost("gold1");
+        r.setName("gtx");
         devices.add(r);
         r = new HwResource();
         r.setHost("gold2");
+        r.setName("tesla");
         devices.add(r);
         //  ^^  FIXME(ckatsak)  ^^
 
