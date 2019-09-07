@@ -195,28 +195,47 @@ public class FlinkExecutionGraph {
 
     // --------------------------------------------------------------------------------------------
 
+    private static final List<String> NON_OPERATOR_NAMES = new ArrayList<String>() {{
+        add("DataSource");
+        add("DataSink");
+        add("Sync");
+        add("PartialSolution");
+    }};
+
     /**
      * @return a JSON formatted JSONableFlinkExecutionGraph
      */
     @Override
     public String toString() {
-        JSONableScheduledJobVertex[] vs = new JSONableScheduledJobVertex[this.scheduledJobVertices.size()];
-        for (int i = 0; i < vs.length; i++) {
-            vs[i] = new JSONableScheduledJobVertex();
-            vs[i].setId(this.jobVertices[i].getID());
-            vs[i].setLayer(this.scheduledJobVertices.get(i).getLayer());
-            vs[i].setAssignedResource(this.scheduledJobVertices.get(i).getAssignedResource());
+        final List<Integer> schedulableIndices = new ArrayList<>();
+        outer:
+        for (int i = 0; i < this.jobVertices.length; i++) {
+            for (String name : FlinkExecutionGraph.NON_OPERATOR_NAMES) {
+                if (this.jobVertices[i].getName().startsWith(name)) {
+                    continue outer;
+                }
+            }
+            schedulableIndices.add(i);
+        }
+
+        final List<JSONableScheduledJobVertex> vs = new ArrayList<JSONableScheduledJobVertex>(schedulableIndices.size());
+        for (int i : schedulableIndices) {
+            JSONableScheduledJobVertex v = new JSONableScheduledJobVertex();
+            v.setId(this.jobVertices[i].getID());
+            v.setLayer(this.scheduledJobVertices.get(i).getLayer());
+            v.setAssignedResource(this.scheduledJobVertices.get(i).getAssignedResource());
 
             final List<Integer> childrenIndices = this.scheduledJobVertices.get(i).getChildren();
             final JobVertexID[] childrenIDs = new JobVertexID[childrenIndices.size()];
             for (int j = 0; j < childrenIndices.size(); j++) {
                 childrenIDs[j] = this.jobVertices[childrenIndices.get(j)].getID();
             }
-            vs[i].setChildren(childrenIDs);
+            v.setChildren(childrenIDs);
+            vs.add(v);
         }
 
-        JSONableFlinkExecutionGraph jfeg = new JSONableFlinkExecutionGraph();
-        jfeg.setJSONableScheduledJobVertices(vs);
+        final JSONableFlinkExecutionGraph jfeg = new JSONableFlinkExecutionGraph();
+        jfeg.setJSONableScheduledJobVertices(vs.toArray(new JSONableScheduledJobVertex[schedulableIndices.size()]));
 
         return new GsonBuilder().setPrettyPrinting().create().toJson(jfeg);
     }
