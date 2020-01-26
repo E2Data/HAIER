@@ -83,8 +83,8 @@ public class E2dScheduler {
     public FlinkExecutionGraph schedule(JobGraph jobGraph, OptimizationPolicy policy) {
         Model selectedModel = null;
         if (policy.getMlModel() == null || !this.models.containsKey(policy.getMlModel())) {
-            //selectedModel = this.models.get(DEFAULT_MODEL);
-            selectedModel = new DemoModel();
+            selectedModel = this.models.get(DEFAULT_MODEL);
+            //selectedModel = new DemoModel();
         } else {
             selectedModel = this.models.get(policy.getMlModel());
         }
