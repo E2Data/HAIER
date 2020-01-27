@@ -22,7 +22,7 @@ import java.util.*;
 /**
  * Implementation of the NSGAII optimizer
  */
-public class NSGAIIFlinkOptimizer {  //FIXME(ckatsak): implements Optimizer ?
+public class NSGAIIFlinkOptimizer implements Optimizer {
 
     private static final Logger logger = Logger.getLogger(NSGAIIFlinkOptimizer.class.getCanonicalName());
 
