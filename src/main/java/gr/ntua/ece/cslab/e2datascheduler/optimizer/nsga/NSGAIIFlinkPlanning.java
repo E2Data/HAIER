@@ -21,11 +21,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import java.util.logging.Logger;
+
 /**
  * Class that implements the main functionalities of the NSGAII algorithm, i.e.,
  * the 'newSolution' and 'evaluate' methods
  */
 public class NSGAIIFlinkPlanning extends AbstractProblem {
+
+    private static final Logger logger = Logger.getLogger(NSGAIIFlinkPlanning.class.getCanonicalName());
 
     /**
      * The Flink JobGraph that represents the tasks, and must be scheduled on
@@ -70,7 +74,10 @@ public class NSGAIIFlinkPlanning extends AbstractProblem {
 
     public NSGAIIFlinkPlanning(List<HwResource> devices, Model mlModel, JobGraph jobGraph, OptimizationPolicy policy){
         super(jobGraph.getNumberOfVertices(), policy.getNumberOfObjectives());
-        this.devices = devices;
+        this.devices = new ArrayList<HwResource>();
+        for (HwResource r : devices) {
+            this.devices.add(r);
+        }
         this.mlModel = mlModel;
         this.jobGraph = jobGraph;
         this.jobVertices = initializeJobVertices(jobGraph);
@@ -94,7 +101,7 @@ public class NSGAIIFlinkPlanning extends AbstractProblem {
         try {
             return jobGraph.getVerticesSortedTopologicallyFromSources().toArray(new JobVertex[jobGraph.getNumberOfVertices()]);
         } catch (Exception e) {
-            System.err.printf("[NSGAIIFlinkPlanning] OOPS! %s\n", e.getMessage());
+            logger.severe("[NSGAIIFlinkPlanning] OOPS!\n" + e.getMessage() + "\n");
             e.printStackTrace();
             return jobGraph.getVerticesAsArray();
         }
@@ -143,7 +150,7 @@ public class NSGAIIFlinkPlanning extends AbstractProblem {
                 default:
                     // FIXME(ckatsak): This should be unreachable; yet, it depends on the input
                     // incoming from the network. For now, just log it and skip its evaluation.
-                    System.err.printf("[NSGAIIPlanning] Unknown objective: '%s'\n", objective);
+                    logger.warning("[NSGAIIPlanning] Unknown objective: '" + objective + "'\n");
                     break;
             }
         }

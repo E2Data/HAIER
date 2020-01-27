@@ -67,5 +67,10 @@ public class ClusterNode {
         }
     }
 
+    @Override
+    public String toString() {
+        return "<ClusterNode nodeHTTPAddress=" +  this.nodeHTTPAddress + ">";
+    }
+
 }
 

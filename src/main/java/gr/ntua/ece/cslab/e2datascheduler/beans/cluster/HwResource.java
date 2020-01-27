@@ -43,4 +43,9 @@ public class HwResource {
     public void setHost(String host) {
         this.host = host;
     }
+
+    @Override
+    public String toString() {
+        return "<HwResource name=" + this.name + " host=" + this.host + " value=" + this.value + ">";
+    }
 }
