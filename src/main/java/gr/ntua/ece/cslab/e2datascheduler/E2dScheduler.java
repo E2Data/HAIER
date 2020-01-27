@@ -1,7 +1,5 @@
 package gr.ntua.ece.cslab.e2datascheduler;
 
-import gr.ntua.ece.cslab.e2datascheduler.beans.graph.ExecutionGraph;
-import gr.ntua.ece.cslab.e2datascheduler.beans.graph.ToyJobGraph;
 import gr.ntua.ece.cslab.e2datascheduler.beans.optpolicy.OptimizationPolicy;
 import gr.ntua.ece.cslab.e2datascheduler.graph.FlinkExecutionGraph;
 import gr.ntua.ece.cslab.e2datascheduler.ml.Model;
@@ -9,7 +7,6 @@ import gr.ntua.ece.cslab.e2datascheduler.ml.ModelLibrary;
 import gr.ntua.ece.cslab.e2datascheduler.ml.impl.DemoModel;
 import gr.ntua.ece.cslab.e2datascheduler.ml.impl.DummyModel;
 import gr.ntua.ece.cslab.e2datascheduler.optimizer.Optimizer;
-import gr.ntua.ece.cslab.e2datascheduler.optimizer.nsga.NSGAIIOptimizer;
 import gr.ntua.ece.cslab.e2datascheduler.optimizer.nsga.NSGAIIFlinkOptimizer;
 
 import org.apache.flink.runtime.jobgraph.JobGraph;
@@ -58,7 +55,7 @@ public class E2dScheduler {
                 default: break;
             }
         }
-        optimizer = new NSGAIIOptimizer();
+        optimizer = new NSGAIIFlinkOptimizer();
     }
 
     public static E2dScheduler getInstance(){
@@ -66,18 +63,6 @@ public class E2dScheduler {
             scheduler = new E2dScheduler();
         }
         return scheduler;
-    }
-
-    public ExecutionGraph schedule(ToyJobGraph indexedGraph, OptimizationPolicy policy) {
-        Model selectedModel = null;
-        if(policy.getMlModel() == null || !models.containsKey(policy.getMlModel())){
-            selectedModel = models.get(DEFAULT_MODEL);
-        }else{
-            selectedModel = models.get(policy.getMlModel());
-        }
-
-        ExecutionGraph result = optimizer.optimize(indexedGraph, policy, selectedModel);
-        return result;
     }
 
     public FlinkExecutionGraph schedule(JobGraph jobGraph, OptimizationPolicy policy) {
@@ -89,7 +74,8 @@ public class E2dScheduler {
             selectedModel = this.models.get(policy.getMlModel());
         }
 
-        return new NSGAIIFlinkOptimizer().optimize(jobGraph, policy, selectedModel);
+        return this.optimizer.optimize(jobGraph, policy, selectedModel);
+        //return new NSGAIIFlinkOptimizer().optimize(jobGraph, policy, selectedModel);
     }
 
 }

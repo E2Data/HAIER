@@ -101,7 +101,7 @@ public class NSGAIIFlinkPlanning extends AbstractProblem {
         try {
             return jobGraph.getVerticesSortedTopologicallyFromSources().toArray(new JobVertex[jobGraph.getNumberOfVertices()]);
         } catch (Exception e) {
-            logger.severe("[NSGAIIFlinkPlanning] OOPS!\n" + e.getMessage() + "\n");
+            logger.severe("OOPS!\n" + e.getMessage() + "\n");
             e.printStackTrace();
             return jobGraph.getVerticesAsArray();
         }
@@ -150,7 +150,7 @@ public class NSGAIIFlinkPlanning extends AbstractProblem {
                 default:
                     // FIXME(ckatsak): This should be unreachable; yet, it depends on the input
                     // incoming from the network. For now, just log it and skip its evaluation.
-                    logger.warning("[NSGAIIPlanning] Unknown objective: '" + objective + "'\n");
+                    logger.warning("Unknown objective: '" + objective + "'\n");
                     break;
             }
         }

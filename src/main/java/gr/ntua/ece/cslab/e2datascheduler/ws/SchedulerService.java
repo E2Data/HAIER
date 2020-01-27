@@ -1,10 +1,6 @@
 package gr.ntua.ece.cslab.e2datascheduler.ws;
 
 import gr.ntua.ece.cslab.e2datascheduler.E2dScheduler;
-import gr.ntua.ece.cslab.e2datascheduler.beans.SubmittedTask;
-import gr.ntua.ece.cslab.e2datascheduler.beans.graph.ExecutionGraph;
-import gr.ntua.ece.cslab.e2datascheduler.beans.graph.ScheduledGraphNode;
-import gr.ntua.ece.cslab.e2datascheduler.beans.graph.ToyJobGraph;
 import gr.ntua.ece.cslab.e2datascheduler.beans.optpolicy.OptimizationPolicy;
 import gr.ntua.ece.cslab.e2datascheduler.graph.FlinkExecutionGraph;
 import gr.ntua.ece.cslab.e2datascheduler.graph.ScheduledJobVertex;
@@ -49,29 +45,6 @@ public class SchedulerService extends AbstractE2DataService {
 
     public SchedulerService(){
         scheduler = E2dScheduler.getInstance();
-    }
-
-    @Path("/schedule")
-    @POST
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response schedule(SubmittedTask inputTask) {
-        //TODO: @gmytil: Take care of error handling. What can go wrong during optimization?
-        //FIXME: @gmytil: What is the appropriate HTTP status to return for each case?
-
-        logger.info(inputTask.getPolicy().getObjectives()[0].getName());
-
-        OptimizationPolicy policy = inputTask.getPolicy();
-        ToyJobGraph inputGraph = inputTask.getJobgraph();
-
-        logger.info(inputGraph.toString());
-        inputGraph.index();
-
-
-        ExecutionGraph result = scheduler.schedule(inputGraph, policy);
-        for(ScheduledGraphNode sn : result.getExecutionGraph()){
-            logger.info(sn.toString());
-        }
-        return generateResponse(Response.Status.OK, result);
     }
 
     // just for testing setup
