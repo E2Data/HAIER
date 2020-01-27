@@ -9,10 +9,14 @@ import java.util.Map;
 import java.util.List;
 import java.util.Random;
 
+import java.util.logging.Logger;
+
 /**
  * Dummy class that mocks a model and serves integration purposes
  */
 public class DummyModel extends Model {
+
+    private static final Logger logger = Logger.getLogger(DummyModel.class.getCanonicalName());
 
     /**
      * Predictions for all kernels can be cached here for future use.
@@ -28,7 +32,7 @@ public class DummyModel extends Model {
     public double predict(String objective, HwResource device, String sourceCode) {
         if (!this.predictionCache.containsKey(sourceCode)) {
             final List<Double> inputFeatures = FeatureExtractor.getInstance().extract(sourceCode);
-            System.err.println("[DummyModel] Features retrieved: " + inputFeatures);
+            logger.info("[DummyModel] Features retrieved: " + inputFeatures);
 
             // XXX(ckatsak): Random prediction gets cached for future use until
             //               the integration with an existing ML model. The

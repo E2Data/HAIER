@@ -23,6 +23,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import java.util.logging.Logger;
+import java.util.ResourceBundle;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -41,8 +42,8 @@ public class SchedulerService extends AbstractE2DataService {
 
     private static final Logger logger = Logger.getLogger(SchedulerService.class.getCanonicalName());
 
-    // FIXME(ckatsak): should be configurable rather than hard-coded, with a sane default (e.g. "/tmp/")
-    private static final String tmpRootPath = "/home/users/ckatsak/haier_tmp/";
+    public static ResourceBundle resourceBundle = ResourceBundle.getBundle("config");
+    private static final String tmpRootPath = resourceBundle.getString("haier.tmp.path");
 
     private E2dScheduler scheduler;
 
@@ -117,7 +118,23 @@ public class SchedulerService extends AbstractE2DataService {
 
         // FIXME(ckatsak): For now, a default OptimizationPolicy object is
         //                 hardcoded here instead of being sent by Flink.
-        String policyStr = "{\"policy\": {\"objectives\": [ {\"name\":\"execTime\", \"targetFunction\":\"MIN\", \"combineFunction\":\"MAX\"}, {\"name\":\"powerCons\", \"targetFunction\":\"MIN\", \"combineFunction\":\"SUM\"} ]}}";
+        //String policyStr = "{\"policy\": {\"objectives\": [ {\"name\":\"execTime\", \"targetFunction\":\"MIN\", \"combineFunction\":\"MAX\"}, {\"name\":\"powerCons\", \"targetFunction\":\"MIN\", \"combineFunction\":\"SUM\"} ]}}";
+        String policyStr = "{" +
+                            "\"policy\": {" +
+                                "\"objectives\": [" +
+                                    "{" +
+                                        "\"name\": \"execTime\"," +
+                                        "\"combineFunction\": \"MAX\"," +
+                                        "\"targetFunction\": \"MIN\"" +
+                                    "}," +
+                                    "{" +
+                                        "\"name\": \"powerCons\"," +
+                                        "\"combineFunction\": \"SUM\"," +
+                                        "\"targetFunction\": \"MIN\"" +
+                                    "}" +
+                                "]" +
+                            "}" +
+                        "}";
 
         final FlinkExecutionGraph result = this.scheduler.schedule(jobGraph, OptimizationPolicy.parseJSON(policyStr));
 

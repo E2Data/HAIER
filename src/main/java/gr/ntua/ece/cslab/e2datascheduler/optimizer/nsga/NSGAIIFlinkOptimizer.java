@@ -15,6 +15,7 @@ import org.moeaframework.Executor;
 import org.moeaframework.core.NondominatedPopulation;
 import org.moeaframework.core.Solution;
 
+import java.util.logging.Logger;
 import java.util.*;
 
 
@@ -22,6 +23,8 @@ import java.util.*;
  * Implementation of the NSGAII optimizer
  */
 public class NSGAIIFlinkOptimizer {  //FIXME(ckatsak): implements Optimizer ?
+
+    private static final Logger logger = Logger.getLogger(NSGAIIFlinkOptimizer.class.getCanonicalName());
 
     public static ResourceBundle resourceBundle = ResourceBundle.getBundle("config");
 
@@ -66,22 +69,22 @@ public class NSGAIIFlinkOptimizer {  //FIXME(ckatsak): implements Optimizer ?
     // --------------------------------------------------------------------------------------------
 
     public FlinkExecutionGraph optimize(final JobGraph flinkJobGraph, final OptimizationPolicy policy, final Model mlModel) {
-        // (gmytil) each time we get an optimization request, we have to obtain a fresh view
-        // of the available cluster resources.
+        // On each optimization request, we obtain a fresh view of the
+        // available cluster resources.
+        YarnCluster cluster = YarnCluster.getInstance();
+        if (cluster != null) {
+            devices.clear();
+
+            for (ClusterNode node : cluster.getNodes()) {
+                logger.info("Yarn reported node: " + node);
+                ArrayList<HwResource>  availableResources = node.getAvailableResources();
+                for (HwResource r : availableResources) {
+                    logger.info("\tYarn reported resource: " + r);
+                    devices.add(r);
+                }
+            }
+        } //FIXME: what is the expected behavior if I cannot get fresh status from the cluster?
 /*
-		YarnCluster cluster = YarnCluster.getInstance();
-		if(cluster != null) {
-		    devices.clear();
-
-		    for (ClusterNode node : cluster.getNodes()) {
-			ArrayList<HwResource>  availableResources = node.getAvailableResources();
-			for (HwResource r : availableResources) {
-			    devices.add(r);
-			}
-
-		    }
-		} //FIXME: what is the expected behavior if I cannot get fresh status from the cluster?
-*/
         //  vv  FIXME(ckatsak)  vv
         // Yarn workaround -- hard-coding devices
         HwResource r = new HwResource();
@@ -97,6 +100,7 @@ public class NSGAIIFlinkOptimizer {  //FIXME(ckatsak): implements Optimizer ?
         r.setName("tesla");
         devices.add(r);
         //  ^^  FIXME(ckatsak)  ^^
+*/
 
 
         // Construct the problem.
