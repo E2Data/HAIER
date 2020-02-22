@@ -11,7 +11,6 @@ import gr.ntua.ece.cslab.e2datascheduler.optimizer.nsga.NSGAIIFlinkOptimizer;
 
 import org.apache.flink.runtime.jobgraph.JobGraph;
 
-import java.util.NoSuchElementException;
 import java.util.ResourceBundle;
 
 /**

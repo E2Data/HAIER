@@ -35,7 +35,6 @@ public class HaierServer {
         } catch (Exception ex) {
             ex.printStackTrace();
         } finally {
-
             server.destroy();
         }
     }
