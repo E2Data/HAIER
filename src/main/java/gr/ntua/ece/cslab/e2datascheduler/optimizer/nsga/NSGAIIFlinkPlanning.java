@@ -4,10 +4,10 @@ import gr.ntua.ece.cslab.e2datascheduler.beans.cluster.HwResource;
 import gr.ntua.ece.cslab.e2datascheduler.beans.optpolicy.Objective;
 import gr.ntua.ece.cslab.e2datascheduler.beans.optpolicy.OptimizationPolicy;
 import gr.ntua.ece.cslab.e2datascheduler.graph.FlinkExecutionGraph;
-import gr.ntua.ece.cslab.e2datascheduler.graph.Layer;
 import gr.ntua.ece.cslab.e2datascheduler.graph.ScheduledJobVertex;
 import gr.ntua.ece.cslab.e2datascheduler.ml.Model;
-//import gr.ntua.ece.cslab.e2datascheduler.ml.util.FeatureExtractor;
+import gr.ntua.ece.cslab.e2datascheduler.optimizer.nsga.exhaustivetimeevaluation.ExhaustiveEvaluation;
+import gr.ntua.ece.cslab.e2datascheduler.optimizer.nsga.layeredtimeevaluation.LayeredEvaluation;
 
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.JobVertex;
@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.ResourceBundle;
 
 import java.util.logging.Logger;
 
@@ -30,6 +31,9 @@ import java.util.logging.Logger;
 public class NSGAIIFlinkPlanning extends AbstractProblem {
 
     private static final Logger logger = Logger.getLogger(NSGAIIFlinkPlanning.class.getCanonicalName());
+
+    public static ResourceBundle resourceBundle = ResourceBundle.getBundle("config");
+    private static String timeEvalAlgorithm = resourceBundle.getString("optimizer.evalAlgorithm").toLowerCase();
 
     /**
      * The Flink JobGraph that represents the tasks, and must be scheduled on
@@ -70,6 +74,12 @@ public class NSGAIIFlinkPlanning extends AbstractProblem {
      */
     final Map<Solution, FlinkExecutionGraph> solutionGraphs;
 
+    /**
+     * timeEvaluator is a GOF Strategy handle for the implementation of
+     * the execution time evaluation algorithms on a Flink JobGraph.
+     */
+    final TimeEvaluationAlgorithm timeEvaluator;
+
     // -------------------------------------------------------------------------------------------
 
     public NSGAIIFlinkPlanning(List<HwResource> devices, Model mlModel, JobGraph jobGraph, OptimizationPolicy policy){
@@ -88,6 +98,16 @@ public class NSGAIIFlinkPlanning extends AbstractProblem {
         for (Objective obj : policy.getObjectives()) {
             this.objectives.put(obj.getName(), objectiveIndex);
             objectiveIndex++;
+        }
+
+        switch (timeEvalAlgorithm) {
+            case "layered":
+                this.timeEvaluator = new LayeredEvaluation(this.mlModel);
+                break;
+            case "exhaustive":
+            default:
+                this.timeEvaluator = new ExhaustiveEvaluation();
+                break;
         }
     }
 
@@ -138,21 +158,23 @@ public class NSGAIIFlinkPlanning extends AbstractProblem {
         this.solutionGraphs.put(solution, flinkExecutionGraph);
 
         // TODO(ckatsak): For now, objectives are identified via String objects.
-        // This should probably change. Maybe Enums + Visitor ?
+        //                This should probably change. Maybe Enums + Visitor ?
         for (String objective : this.objectives.keySet()) {
+            double costEstimation = Double.NEGATIVE_INFINITY;
             switch (objective) {
                 case "execTime":
-                    objectiveCosts.put(objective, calculateExecutionTime(flinkExecutionGraph));
+                    costEstimation = this.timeEvaluator.calculateExecutionTime(flinkExecutionGraph);
                     break;
                 case "powerCons":
-                    objectiveCosts.put(objective, calculatePowerConsumption(flinkExecutionGraph));
+                    costEstimation = this.calculatePowerConsumption(flinkExecutionGraph);
                     break;
                 default:
                     // FIXME(ckatsak): This should be unreachable; yet, it depends on the input
-                    // incoming from the network. For now, just log it and skip its evaluation.
+                    //  incoming from the network. For now, just log it and skip its evaluation.
                     logger.warning("Unknown objective: '" + objective + "'\n");
                     break;
             }
+            objectiveCosts.put(objective, costEstimation);
         }
 
         for (Map.Entry<String, Integer> objective : this.objectives.entrySet()) {
@@ -178,69 +200,10 @@ public class NSGAIIFlinkPlanning extends AbstractProblem {
         }
 
         /* Construct Layer objects and annotate the graph. */
-        flinkExecutionGraph.constructLayers();
+        //flinkExecutionGraph.timeEvaluatorInitialization();
+        timeEvaluator.initialization(flinkExecutionGraph);
 
         return flinkExecutionGraph;
-    }
-
-    /**
-     * Calculate the total execution time for the given FlinkExecutionGraph.
-     */
-    private double calculateExecutionTime(final FlinkExecutionGraph flinkExecutionGraph) {
-        double totalDuration = 0.0d;
-
-        for (Layer layer : flinkExecutionGraph.getLayers()) {
-            // Group the JobVertex objects based on the device they have been assigned to.
-            Map<HwResource, ArrayList<ScheduledJobVertex>> layerVerticesPerDevice = layer.getColocations();
-
-            // Initialize an auxiliary array to store the execution time for each device.
-            double[] deviceExecTime = new double[layerVerticesPerDevice.size()];
-            // Loop through the tasks assigned on each device to calculate the
-            // total execution time per device. Then, store this in the array.
-            int i = 0;
-            for (ArrayList<ScheduledJobVertex> deviceVertices : layerVerticesPerDevice.values()) {
-                deviceExecTime[i++] = sumDurations(deviceVertices);
-            }
-
-            // Once the execution time on each device is calculated for all
-            // devices, current Layer's total execution time is defined as the
-            // maximum of these values, since execution on different devices
-            // takes place in parallel.
-            double layerDuration = 0.0d;
-            for (i = 0; i < deviceExecTime.length; ++i) {
-                if (deviceExecTime[i] > layerDuration) {
-                    layerDuration = deviceExecTime[i];
-                }
-            }
-
-            // Store it in Layer too. NOTE(ckatsak): not really needed for now
-            layer.setDuration(layerDuration);
-            // Sum it to the FlinkExecutionGraph's total execution time.
-            totalDuration += layerDuration;
-        }
-
-        return totalDuration;
-    }
-
-    /**
-     * Given an List of ScheduledJobVertex objects, this function returns the
-     * sum of the estimated execution durations, using the Model's predictions
-     * for each task.
-     */
-    private double sumDurations(final List<ScheduledJobVertex> scheduledJobVertices) {
-        double sum = 0.0d;
-
-        for (ScheduledJobVertex scheduledJobVertex : scheduledJobVertices) {
-            // XXX(ckatsak): Two versions: one using the FeatureExtractor and another
-            // one passing the source code to the Model, as per @kbitsak 's preference.
-            sum += this.mlModel.predict("execTime",
-                                        scheduledJobVertex.getAssignedResource(),
-                                        scheduledJobVertex.getSourceCode());
-            //sum += this.mlModel.predict("execTime", scheduledJobVertex.getAssignedResource(),
-            //        FeatureExtractor.extract(scheduledJobVertex.getSourceCode()));
-        }
-
-        return sum;
     }
 
     /**

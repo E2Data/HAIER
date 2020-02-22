@@ -3,7 +3,6 @@ package gr.ntua.ece.cslab.e2datascheduler.ws;
 import gr.ntua.ece.cslab.e2datascheduler.E2dScheduler;
 import gr.ntua.ece.cslab.e2datascheduler.beans.optpolicy.OptimizationPolicy;
 import gr.ntua.ece.cslab.e2datascheduler.graph.FlinkExecutionGraph;
-import gr.ntua.ece.cslab.e2datascheduler.graph.ScheduledJobVertex;
 
 import org.apache.flink.runtime.jobgraph.JobGraph;
 
