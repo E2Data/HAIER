@@ -12,10 +12,12 @@ import org.apache.flink.runtime.jobgraph.JobVertexID;
 
 import com.google.gson.GsonBuilder;
 
-import java.util.List;
 import java.util.ArrayList;
-import java.util.Map;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 
 /**
@@ -90,12 +92,60 @@ public class FlinkExecutionGraph {
 
     // --------------------------------------------------------------------------------------------
 
-    private static final List<String> NON_OPERATOR_NAMES = new ArrayList<String>() {{
+    /**
+     * Find and return the root vertices for the JobGraph related to this
+     * FlinkExecutionGraph.
+     *
+     * ~ O(V)
+     */
+    public List<Integer> findRootJobVertices() {
+        if (this.jobVertices.length == 0) {
+            return java.util.Collections.emptyList();
+        }
+
+        final List<Integer> roots = new ArrayList<>();
+        for (int i = 0; i < this.jobVertices.length; i++) {
+            if (this.jobVertices[i].hasNoConnectedInputs()) {
+                roots.add(i);
+            }
+        }
+        return roots;
+    }
+
+    public Set<Integer> getSubDAGInclusive(final ScheduledJobVertex scheduledJobVertex) {
+        final Set<Integer> ret = new HashSet<>();
+        auxSubDAGInclusiveRecursive(scheduledJobVertex, ret);
+        return ret;
+    }
+
+    private void auxSubDAGInclusiveRecursive(final ScheduledJobVertex scheduledJobVertex, final Set<Integer> subDAG) {
+        subDAG.add(scheduledJobVertex.getJobVertexIndex());
+        for (Integer childVertex : scheduledJobVertex.getChildren()) {
+            auxSubDAGInclusiveRecursive(this.scheduledJobVertices.get(childVertex), subDAG);
+        }
+    }
+
+    // --------------------------------------------------------------------------------------------
+
+    private static final List<String> NON_COMPUTATIONAL_OPERATOR_NAMES = new ArrayList<String>() {{
         add("DataSource");
         add("DataSink");
         add("Sync");
         add("PartialSolution");
     }};
+
+    public static final boolean isComputational(final JobVertex jobVertex) {
+        for (String name : FlinkExecutionGraph.NON_COMPUTATIONAL_OPERATOR_NAMES) {
+            if (jobVertex.getName().startsWith(name)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public static final boolean isComputational(final ScheduledJobVertex scheduledJobVertex) {
+        return FlinkExecutionGraph.isComputational(scheduledJobVertex.getJobVertex());
+    }
 
     /**
      * @return a JSON formatted JSONableFlinkExecutionGraph
@@ -105,7 +155,7 @@ public class FlinkExecutionGraph {
         final List<Integer> schedulableIndices = new ArrayList<>();
         outer:
         for (int i = 0; i < this.jobVertices.length; i++) {
-            for (String name : FlinkExecutionGraph.NON_OPERATOR_NAMES) {
+            for (String name : FlinkExecutionGraph.NON_COMPUTATIONAL_OPERATOR_NAMES) {
                 if (this.jobVertices[i].getName().startsWith(name)) {
                     continue outer;
                 }

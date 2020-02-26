@@ -11,9 +11,7 @@ public class ScheduledJobVertex {
 
     /**
      * The index of the corresponding JobVertex object, known by
-     * FlinkExecutionGraph.
-     *
-     * FIXME(ckatsak): Not sure if really needed, at least for the time being
+     * FlinkExecutionGraph (i.e. internal to HAIER).
      */
     private final int jobVertexIndex;
 
@@ -69,6 +67,10 @@ public class ScheduledJobVertex {
 
         // XXX(ckatsak): Demo
         this.sourceCode = retrieveSourceCode();
+    }
+
+    public JobVertex getJobVertex() {
+        return this.jobVertex;
     }
 
     public List<Integer> getChildren() {
