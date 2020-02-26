@@ -6,21 +6,13 @@ import gr.ntua.ece.cslab.e2datascheduler.graph.ScheduledJobVertex;
 import gr.ntua.ece.cslab.e2datascheduler.ml.Model;
 import gr.ntua.ece.cslab.e2datascheduler.optimizer.nsga.TimeEvaluationAlgorithm;
 
-import org.apache.flink.runtime.jobgraph.JobVertex;
-
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 
-public class LayeredEvaluation implements TimeEvaluationAlgorithm {
-
-    /**
-     * The Model that is being consulted for the cost of a task on a particular
-     * device.
-     */
-    private final Model mlModel;
+public class LayeredEvaluation extends TimeEvaluationAlgorithm {
 
     /**
      * An ArrayList that includes all Layers in this FlinkExecutionGraph, in
@@ -31,7 +23,7 @@ public class LayeredEvaluation implements TimeEvaluationAlgorithm {
     // --------------------------------------------------------------------------------------------
 
     public LayeredEvaluation(final Model mlModel) {
-        this.mlModel = mlModel;
+        super(mlModel);
         this.layers = new ArrayList<>();
     }
 
@@ -39,7 +31,7 @@ public class LayeredEvaluation implements TimeEvaluationAlgorithm {
 
     @Override
     public void initialization(final FlinkExecutionGraph flinkExecutionGraph) {
-        this.constructLayersBFS(flinkExecutionGraph.getJobVertices(), flinkExecutionGraph.getScheduledJobVertices());
+        this.constructLayersBFS(flinkExecutionGraph);
     }
 
     // --------------------------------------------------------------------------------------------
@@ -116,13 +108,14 @@ public class LayeredEvaluation implements TimeEvaluationAlgorithm {
      * TODO(ckatsak): Special handling for case (this.jobVertices.length == 0)?
      *                Not necessary for now.
      */
-    private void constructLayersBFS(final JobVertex[] jobVertices, final ArrayList<ScheduledJobVertex> scheduledJobVertices) {
+    private void constructLayersBFS(final FlinkExecutionGraph flinkExecutionGraph) {
+        final ArrayList<ScheduledJobVertex> scheduledJobVertices = flinkExecutionGraph.getScheduledJobVertices();
         // Construct a queue for the BFS-like traversal.
         final Queue<Integer> q = new LinkedList<Integer>();
 
         // Construct the first Layer, i.e. JobGraph's "root" JobVertex objects.
         final Layer rootLayer = new Layer();
-        for (int rootJobVertexIndex : this.findRootJobVertices(jobVertices)) {
+        for (int rootJobVertexIndex : flinkExecutionGraph.findRootJobVertices()) {
             rootLayer.addScheduledJobVertex(scheduledJobVertices.get(rootJobVertexIndex));
             //scheduledJobVertices.get(rootJobVertexIndex).setLayer(0);  // initialized to 0 by default anyway
             q.add(rootJobVertexIndex);
@@ -153,26 +146,6 @@ public class LayeredEvaluation implements TimeEvaluationAlgorithm {
             // Last, append all parent's children to the queue to be (possibly re-)examined.
             q.addAll(parentScheduledJobVertex.getChildren());
         }
-    }
-
-    /**
-     * Find and return the root vertices for the JobGraph related to this
-     * FlinkExecutionGraph.
-     *
-     * ~ O(V)
-     */
-    private List<Integer> findRootJobVertices(final JobVertex[] jobVertices) {
-        if (jobVertices.length == 0) {
-            return java.util.Collections.emptyList();
-        }
-
-        final List<Integer> roots = new ArrayList<>(1);
-        for (int i = 0; i < jobVertices.length; i++) {
-            if (jobVertices[i].hasNoConnectedInputs()) {
-                roots.add(i);
-            }
-        }
-        return roots;
     }
 
     /**

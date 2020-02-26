@@ -106,7 +106,7 @@ public class NSGAIIFlinkPlanning extends AbstractProblem {
                 break;
             case "exhaustive":
             default:
-                this.timeEvaluator = new ExhaustiveEvaluation();
+                this.timeEvaluator = new ExhaustiveEvaluation(this.mlModel);
                 break;
         }
     }
