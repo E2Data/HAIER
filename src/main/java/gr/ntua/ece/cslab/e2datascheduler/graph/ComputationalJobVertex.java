@@ -5,7 +5,7 @@ import gr.ntua.ece.cslab.e2datascheduler.beans.cluster.HwResource;
 import java.util.ArrayList;
 
 /**
- *
+ * A single vertex in a {@link ComputationalGraph}.
  */
 public class ComputationalJobVertex {
 
@@ -35,6 +35,7 @@ public class ComputationalJobVertex {
     // --------------------------------------------------------------------------------------------
 
     /**
+     * A single vertex in a {@link ComputationalGraph}.
      *
      * @param scheduledJobVertex The {@link ScheduledJobVertex} that this vertex represents.
      */

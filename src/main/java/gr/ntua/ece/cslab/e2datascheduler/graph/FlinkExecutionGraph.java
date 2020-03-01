@@ -81,20 +81,19 @@ public class FlinkExecutionGraph {
     }
 
     /**
-     * TODO(ckatsak)
+     * Assign the given {@link HwResource} to the {@link ScheduledJobVertex} with the given (internal to HAIER) ID.
      *
-     * @param jobVertexIndex
-     * @param assignedResource
+     * @param jobVertexIndex The given (internal to HAIER) ID of the {@link ScheduledJobVertex}.
+     * @param assignedResource The given {@link HwResource}.
      */
-    public void assignResource(int jobVertexIndex, HwResource assignedResource) {
+    public void assignResource(final int jobVertexIndex, final HwResource assignedResource) {
         this.scheduledJobVertices.get(jobVertexIndex).setAssignedResource(assignedResource);
     }
 
     // --------------------------------------------------------------------------------------------
 
     /**
-     * Find and return the root vertices for the JobGraph related to this
-     * FlinkExecutionGraph.
+     * Find and return the root vertices for the JobGraph related to this FlinkExecutionGraph.
      *
      * ~ O(V)
      */
@@ -112,12 +111,24 @@ public class FlinkExecutionGraph {
         return roots;
     }
 
+    /**
+     * FIXME(ckatsak): Probably not needed anymore.
+     *
+     * @param scheduledJobVertex
+     * @return
+     */
     public Set<Integer> getSubDAGInclusive(final ScheduledJobVertex scheduledJobVertex) {
         final Set<Integer> ret = new HashSet<>();
         auxSubDAGInclusiveRecursive(scheduledJobVertex, ret);
         return ret;
     }
 
+    /**
+     * FIXME(ckatsak): Probably not needed anymore.
+     *
+     * @param scheduledJobVertex
+     * @param subDAG
+     */
     private void auxSubDAGInclusiveRecursive(final ScheduledJobVertex scheduledJobVertex, final Set<Integer> subDAG) {
         subDAG.add(scheduledJobVertex.getJobVertexIndex());
         for (Integer childVertex : scheduledJobVertex.getChildren()) {
@@ -134,7 +145,14 @@ public class FlinkExecutionGraph {
         add("PartialSolution");
     }};
 
-    public static final boolean isComputational(final JobVertex jobVertex) {
+    /**
+     * Returns {@code true} if the given {@link JobVertex} represents a task that can be offloaded to some
+     * heterogeneous architecture supported by E2Data; {@code false} otherwise.
+     *
+     * @param jobVertex The given {@link JobVertex}.
+     * @return {@code true} if it can be offloaded; {@code false} otherwise.
+     */
+    public static boolean isComputational(final JobVertex jobVertex) {
         for (String name : FlinkExecutionGraph.NON_COMPUTATIONAL_OPERATOR_NAMES) {
             if (jobVertex.getName().startsWith(name)) {
                 return false;
@@ -143,12 +161,19 @@ public class FlinkExecutionGraph {
         return true;
     }
 
-    public static final boolean isComputational(final ScheduledJobVertex scheduledJobVertex) {
+    /**
+     * Returns {@code true} if the given {@link ScheduledJobVertex} represents a task that can be offloaded to some
+     * heterogeneous architecture supported by E2Data; {@code false} otherwise.
+     *
+     * @param scheduledJobVertex The given {@link ScheduledJobVertex}.
+     * @return {@code true} if it can be offloaded; {@code false} otherwise.
+     */
+    public static boolean isComputational(final ScheduledJobVertex scheduledJobVertex) {
         return FlinkExecutionGraph.isComputational(scheduledJobVertex.getJobVertex());
     }
 
     /**
-     * @return a JSON formatted JSONableFlinkExecutionGraph
+     * @return a JSON-formatted {@link JSONableFlinkExecutionGraph}.
      */
     @Override
     public String toString() {
