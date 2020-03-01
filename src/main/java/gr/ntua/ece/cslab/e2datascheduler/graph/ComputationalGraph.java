@@ -2,6 +2,11 @@ package gr.ntua.ece.cslab.e2datascheduler.graph;
 
 import java.util.ArrayList;
 
+/**
+ * An auxiliary class that for the DAG extracted by a {@link FlinkExecutionGraph} but comprised only of those
+ * vertices that represent computational workloads that can be offloaded to some heterogeneous architecture
+ * supported by E2Data.
+ */
 public class ComputationalGraph {
 
     /**
@@ -33,6 +38,9 @@ public class ComputationalGraph {
     // --------------------------------------------------------------------------------------------
 
     /**
+     * An auxiliary class that for the DAG extracted by a {@link FlinkExecutionGraph} but comprised only of those
+     * vertices that represent computational workloads that can be offloaded to some heterogeneous architecture
+     * supported by E2Data.
      *
      * @param flinkExecutionGraph The initial {@link FlinkExecutionGraph} off which the new {@code ComputationalGraph}
      *                            will be created.

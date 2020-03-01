@@ -13,9 +13,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
 
-/**
- *
- */
 public abstract class TimeEvaluationAlgorithm {
 
     /**
@@ -28,27 +25,32 @@ public abstract class TimeEvaluationAlgorithm {
     }
 
     /**
-     * TODO(ckatsak): Documentation
+     * Initialization of the required structures for the time evaluation algorithm to run correctly.
+     * Calling this method before calling the {@code calculateExecutionTime()} method can be a requirement,
+     * although each subclass of {@link TimeEvaluationAlgorithm} may implement this differently.
      *
-     * @param flinkExecutionGraph
+     * @param flinkExecutionGraph The related {@link FlinkExecutionGraph} at hand.
      */
     public abstract void initialization(final FlinkExecutionGraph flinkExecutionGraph);
 
     /**
-     * TODO(ckatsak): Documentation
+     * Calculate the estimated execution time of the given {@link FlinkExecutionGraph}.
      *
-     * @param flinkExecutionGraph
-     * @return
+     * @param flinkExecutionGraph The related {@link FlinkExecutionGraph} at hand.
+     * @return A double-precision floating-point number that represents the evaluation
      */
     public abstract double calculateExecutionTime(final FlinkExecutionGraph flinkExecutionGraph);
 
     // --------------------------------------------------------------------------------------------
 
     /**
-     * TODO(ckatsak): Documentation
+     * Find the root vertices of the sub-DAG in the given {@link FlinkExecutionGraph} that consists only of vertices
+     * which represent computational tasks that can be offloaded to heterogeneous architectures supported by E2Data.
      *
-     * @param flinkExecutionGraph
-     * @return
+     * FIXME(ckatsak): Probably not needed anymore.
+     *
+     * @param flinkExecutionGraph The initial {@link FlinkExecutionGraph}.
+     * @return The (internal to HAIER) indices of the root vertices.
      */
     protected final Set<Integer> findComputationalRootJobVertices(final FlinkExecutionGraph flinkExecutionGraph) {
         final Set<Integer> ret = new HashSet<>();
@@ -77,10 +79,14 @@ public abstract class TimeEvaluationAlgorithm {
     }
 
     /**
-     * TODO(ckatsak): Documentation
+     * Given a {@link FlinkExecutionGraph}, deduce the associated {@link ComputationalGraph}; i.e. the DAG comprised
+     * only of the vertices that represent computational tasks offloadable to heterogeneous architectures supported
+     * by E2Data.
      *
-     * @param flinkExecutionGraph
-     * @return
+     * ~ O(V+E)
+     *
+     * @param flinkExecutionGraph The initial {@link FlinkExecutionGraph}.
+     * @return The produced {@link ComputationalGraph}.
      */
     protected final ComputationalGraph deduceComputationalGraph(final FlinkExecutionGraph flinkExecutionGraph) {
         class SubDAGPair {
