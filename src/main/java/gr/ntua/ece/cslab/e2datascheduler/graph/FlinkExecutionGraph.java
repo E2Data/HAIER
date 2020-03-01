@@ -192,7 +192,6 @@ public class FlinkExecutionGraph {
         for (int i : schedulableIndices) {
             JSONableScheduledJobVertex v = new JSONableScheduledJobVertex();
             v.setId(this.jobVertices[i].getID());
-            v.setLayer(this.scheduledJobVertices.get(i).getLayer());
             v.setAssignedResource(this.scheduledJobVertices.get(i).getAssignedResource());
 
             final List<Integer> childrenIndices = this.scheduledJobVertices.get(i).getChildren();

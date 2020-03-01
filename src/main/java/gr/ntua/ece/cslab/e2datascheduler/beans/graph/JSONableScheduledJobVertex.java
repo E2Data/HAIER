@@ -6,11 +6,9 @@ import org.apache.flink.runtime.jobgraph.JobVertexID;
 
 import com.google.gson.GsonBuilder;
 
-
 public class JSONableScheduledJobVertex {
 
     private JobVertexID id;
-    private int layer;
     private HwResource assignedResource;
     private JobVertexID[] children;
 
@@ -20,14 +18,6 @@ public class JSONableScheduledJobVertex {
 
     public void setId(JobVertexID id) {
         this.id = id;
-    }
-
-    public int getLayer() {
-        return this.layer;
-    }
-
-    public void setLayer(int layer) {
-        this.layer = layer;
     }
 
     public HwResource getAssignedResource() {

@@ -10,38 +10,30 @@ import java.util.List;
 public class ScheduledJobVertex {
 
     /**
-     * The index of the corresponding JobVertex object, known by
-     * FlinkExecutionGraph (i.e. internal to HAIER).
+     * The index of the corresponding {@link JobVertex} object, known by {@link FlinkExecutionGraph} (i.e. internal
+     * to HAIER).
      */
     private final int jobVertexIndex;
 
     /**
-     * The JobVertex object in Flink's JobGraph that corresponds to this
-     * ScheduledJobVertex.
+     * The {@link JobVertex} object in Flink's {@link org.apache.flink.runtime.jobgraph.JobGraph} that corresponds
+     * to this {@link ScheduledJobVertex}.
      *
-     * NOTE(ckatsak): This will probably be required when the integration of
-     * Flink and Tornado is completed, assuming there will be some sort of API
-     * to retrieve this Flink task's underlying OpenCL kernel source code.
+     * NOTE(ckatsak): This will probably be required when the integration of Flink and Tornado is completed, assuming
+     *                there will be some sort of API to retrieve this Flink task's underlying OpenCL kernel source code.
      */
     private final JobVertex jobVertex;
 
     /**
-     * The HAIER-internal indices of the "child" ("dependent") tasks of this
-     * SchuduledJobVertex (actually, of the corresponding JobVertex in the
-     * original JobGraph).
+     * The (internal to HAIER) indices of the "child" ("dependent") tasks of this {@link ScheduledJobVertex} (actually,
+     * of the corresponding {@link JobVertex} in the original {@link org.apache.flink.runtime.jobgraph.JobGraph}).
      */
     private final ArrayList<Integer> childJobVertexIndices;
 
     /**
-     * The source code of the OpenCL kernel related to the corresponding
-     * JobVertex object, as a String.
+     * The source code of the OpenCL kernel related to the corresponding {@link JobVertex} object, as a {@link String}.
      */
     private final String sourceCode;
-
-    /**
-     * FIXME(ckatsak):
-     */
-     private static final String kernelsDir = "/home/users/ckatsak/haier_tmp/kernels/";
 
     /**
      * The hardware resource that the corresponding JobVertex has been assigned
@@ -49,14 +41,12 @@ public class ScheduledJobVertex {
      */
     private HwResource assignedResource;
 
-    /**
-     * The order of this ScheduledJobVertex object's Layer.
-     */
-    private int layer;
-
     // -------------------------------------------------------------------------------------------
 
-    public ScheduledJobVertex(int jobVertexIndex, JobVertex jobVertex, ArrayList<Integer> childJobVertexIndices) {
+    public ScheduledJobVertex(
+            final int jobVertexIndex,
+            final JobVertex jobVertex,
+            final ArrayList<Integer> childJobVertexIndices) {
         this.jobVertexIndex = jobVertexIndex;
         this.jobVertex = jobVertex;
         this.childJobVertexIndices = childJobVertexIndices;
@@ -66,7 +56,7 @@ public class ScheduledJobVertex {
         // FIXME(ckatsak): ^^ awaiting Flink-Tornado integration's API
 
         // XXX(ckatsak): Demo
-        this.sourceCode = retrieveSourceCode();
+        this.sourceCode = this.retrieveSourceCode();
     }
 
     public JobVertex getJobVertex() {
@@ -93,14 +83,6 @@ public class ScheduledJobVertex {
         this.assignedResource = assignedResource;
     }
 
-    public int getLayer() {
-        return this.layer;
-    }
-
-    public void setLayer(int layer) {
-        this.layer = layer;
-    }
-
     // -------------------------------------------------------------------------------------------
 
     private String retrieveSourceCode() {
@@ -112,7 +94,8 @@ public class ScheduledJobVertex {
 
     @Override
     public String toString() {
-        return "ScheduledJobVertex:\n\tJobVertex:\t" + this.jobVertex.toString() + "\n\tScheduled On:\t" + this.assignedResource.toString();
+        return "ScheduledJobVertex:\n\tJobVertex:\t" + this.jobVertex.toString() +
+                "\n\tScheduled On:\t" + this.assignedResource.toString();
     }
 
 }
