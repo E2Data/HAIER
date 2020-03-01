@@ -65,6 +65,14 @@ public class ComputationalGraph {
         return this.computationalJobVertices;
     }
 
+    public ArrayList<ComputationalJobVertex> getRoots() {
+        return this.roots;
+    }
+
+    public ArrayList<Integer> getIndexMapping() {
+        return this.indexMapping;
+    }
+
     // --------------------------------------------------------------------------------------------
 
     /**
