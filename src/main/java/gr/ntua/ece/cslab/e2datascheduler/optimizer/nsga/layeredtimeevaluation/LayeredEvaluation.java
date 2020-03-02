@@ -3,7 +3,7 @@ package gr.ntua.ece.cslab.e2datascheduler.optimizer.nsga.layeredtimeevaluation;
 import gr.ntua.ece.cslab.e2datascheduler.beans.cluster.HwResource;
 import gr.ntua.ece.cslab.e2datascheduler.graph.ComputationalGraph;
 import gr.ntua.ece.cslab.e2datascheduler.graph.ComputationalJobVertex;
-import gr.ntua.ece.cslab.e2datascheduler.graph.FlinkExecutionGraph;
+import gr.ntua.ece.cslab.e2datascheduler.graph.HaierExecutionGraph;
 import gr.ntua.ece.cslab.e2datascheduler.graph.ScheduledJobVertex;
 import gr.ntua.ece.cslab.e2datascheduler.ml.Model;
 import gr.ntua.ece.cslab.e2datascheduler.optimizer.nsga.TimeEvaluationAlgorithm;
@@ -22,7 +22,7 @@ import java.util.Queue;
 public class LayeredEvaluation extends TimeEvaluationAlgorithm {
 
     /**
-     * An ArrayList that includes all {@link Layer} objects in this {@link FlinkExecutionGraph}, in order.
+     * An ArrayList that includes all {@link Layer} objects in this {@link HaierExecutionGraph}, in order.
      */
     private ArrayList<Layer> layers;
 
@@ -54,11 +54,11 @@ public class LayeredEvaluation extends TimeEvaluationAlgorithm {
      * Calling this method can be a requirement before calling the {@code calculateExecutionTime()}
      * method, and each subclass of {@link TimeEvaluationAlgorithm} may implement it differently.
      *
-     * @param flinkExecutionGraph The related {@link FlinkExecutionGraph} at hand.
+     * @param haierExecutionGraph The related {@link HaierExecutionGraph} at hand.
      */
     @Override
-    public void initialization(final FlinkExecutionGraph flinkExecutionGraph) {
-        this.computationalGraph = this.deduceComputationalGraph(flinkExecutionGraph);
+    public void initialization(final HaierExecutionGraph haierExecutionGraph) {
+        this.computationalGraph = this.deduceComputationalGraph(haierExecutionGraph);
         this.layers = new ArrayList<>();
         this.computationalJobVertexLayers = new HashMap<>();
         for (ComputationalJobVertex computationalJobVertex : this.computationalGraph.getComputationalJobVertices()) {
@@ -76,8 +76,6 @@ public class LayeredEvaluation extends TimeEvaluationAlgorithm {
      *
      * TODO(ckatsak): Special handling for case (this.jobVertices.length == 0)?
      *                Not necessary for now.
-     *
-     * //\//@param flinkExecutionGraph The initial {@link FlinkExecutionGraph}.
      */
     private void constructLayersBFS() {
         final ArrayList<ComputationalJobVertex> computationalJobVertices =
@@ -143,14 +141,14 @@ public class LayeredEvaluation extends TimeEvaluationAlgorithm {
     // --------------------------------------------------------------------------------------------
 
     /**
-     * Calculate the estimated execution time of the given {@link FlinkExecutionGraph}.
+     * Calculate the estimated execution time of the given {@link HaierExecutionGraph}.
      * Method {@code initialization()} must have been called before calling this method.
      *
-     * @param flinkExecutionGraph The related {@link FlinkExecutionGraph} at hand.
+     * @param haierExecutionGraph The related {@link HaierExecutionGraph} at hand.
      * @return A double-precision floating-point number that represents the evaluation
      */
     @Override
-    public double calculateExecutionTime(final FlinkExecutionGraph flinkExecutionGraph) {
+    public double calculateExecutionTime(final HaierExecutionGraph haierExecutionGraph) {
         double totalDuration = 0.0d;
 
         for (Layer layer : layers) {
@@ -163,7 +161,7 @@ public class LayeredEvaluation extends TimeEvaluationAlgorithm {
             // total execution time per device. Then, store this in the array.
             int i = 0;
             for (ArrayList<ComputationalJobVertex> deviceVertices : layerVerticesPerDevice.values()) {
-                deviceExecTime[i++] = sumDurations(flinkExecutionGraph, deviceVertices);
+                deviceExecTime[i++] = sumDurations(haierExecutionGraph, deviceVertices);
             }
 
             // Once the execution time on each device is calculated for all devices, current
@@ -178,7 +176,7 @@ public class LayeredEvaluation extends TimeEvaluationAlgorithm {
 
             // Store it in Layer too. FIXME(ckatsak): not really needed for now
             layer.setDuration(layerDuration);
-            // Sum it to the FlinkExecutionGraph's total execution time.
+            // Sum it to the HaierExecutionGraph's total execution time.
             totalDuration += layerDuration;
         }
 
@@ -192,7 +190,7 @@ public class LayeredEvaluation extends TimeEvaluationAlgorithm {
      * @param computationalJobVertices The given list of {@link ComputationalJobVertex}.
      * @return The sum of the estimated execution time durations.
      */
-    private double sumDurations(final FlinkExecutionGraph flinkExecutionGraph,
+    private double sumDurations(final HaierExecutionGraph haierExecutionGraph,
                                 final List<ComputationalJobVertex> computationalJobVertices) {
         double sum = 0.0d;
 
@@ -201,7 +199,7 @@ public class LayeredEvaluation extends TimeEvaluationAlgorithm {
             //                 passing the source code to the Model, as per @kbitsak 's preference.
 
             // FIXME(ckatsak): Temporarily using associated ScheduledJobVertex's sourceCode field.
-            final ScheduledJobVertex scheduledJobVertex = flinkExecutionGraph.getScheduledJobVertices().get(
+            final ScheduledJobVertex scheduledJobVertex = haierExecutionGraph.getScheduledJobVertices().get(
                     this.computationalGraph.getIndexMapping().get(computationalJobVertex.getIndex())
             );
 

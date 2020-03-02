@@ -2,7 +2,7 @@ package gr.ntua.ece.cslab.e2datascheduler.optimizer.nsga;
 
 import gr.ntua.ece.cslab.e2datascheduler.graph.ComputationalGraph;
 import gr.ntua.ece.cslab.e2datascheduler.graph.ComputationalJobVertex;
-import gr.ntua.ece.cslab.e2datascheduler.graph.FlinkExecutionGraph;
+import gr.ntua.ece.cslab.e2datascheduler.graph.HaierExecutionGraph;
 import gr.ntua.ece.cslab.e2datascheduler.graph.ScheduledJobVertex;
 import gr.ntua.ece.cslab.e2datascheduler.ml.Model;
 
@@ -13,6 +13,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
 
+
+/**
+ * The base (abstract) class that must be extended by any execution time evaluation algorithm.
+ */
 public abstract class TimeEvaluationAlgorithm {
 
     /**
@@ -20,6 +24,11 @@ public abstract class TimeEvaluationAlgorithm {
      */
     protected final Model mlModel;
 
+    /**
+     * The base (abstract) class that must be extended by any execution time evaluation algorithm.
+     *
+     * @param mlModel The Machine Learning {@link Model} to be used for predicting each task's execution time.
+     */
     protected TimeEvaluationAlgorithm(final Model mlModel) {
         this.mlModel = mlModel;
     }
@@ -29,44 +38,44 @@ public abstract class TimeEvaluationAlgorithm {
      * Calling this method before calling the {@code calculateExecutionTime()} method can be a requirement,
      * although each subclass of {@link TimeEvaluationAlgorithm} may implement this differently.
      *
-     * @param flinkExecutionGraph The related {@link FlinkExecutionGraph} at hand.
+     * @param haierExecutionGraph The related {@link HaierExecutionGraph} at hand.
      */
-    public abstract void initialization(final FlinkExecutionGraph flinkExecutionGraph);
+    public abstract void initialization(final HaierExecutionGraph haierExecutionGraph);
 
     /**
-     * Calculate the estimated execution time of the given {@link FlinkExecutionGraph}.
+     * Calculate the estimated execution time of the given {@link HaierExecutionGraph}.
      *
-     * @param flinkExecutionGraph The related {@link FlinkExecutionGraph} at hand.
+     * @param haierExecutionGraph The related {@link HaierExecutionGraph} at hand.
      * @return A double-precision floating-point number that represents the evaluation
      */
-    public abstract double calculateExecutionTime(final FlinkExecutionGraph flinkExecutionGraph);
+    public abstract double calculateExecutionTime(final HaierExecutionGraph haierExecutionGraph);
 
     // --------------------------------------------------------------------------------------------
 
     /**
-     * Find the root vertices of the sub-DAG in the given {@link FlinkExecutionGraph} that consists only of vertices
+     * Find the root vertices of the sub-DAG in the given {@link HaierExecutionGraph} that consists only of vertices
      * which represent computational tasks that can be offloaded to heterogeneous architectures supported by E2Data.
      *
      * FIXME(ckatsak): Probably not needed anymore.
      *
-     * @param flinkExecutionGraph The initial {@link FlinkExecutionGraph}.
+     * @param haierExecutionGraph The initial {@link HaierExecutionGraph}.
      * @return The (internal to HAIER) indices of the root vertices.
      */
-    protected final Set<Integer> findComputationalRootJobVertices(final FlinkExecutionGraph flinkExecutionGraph) {
+    protected final Set<Integer> findComputationalRootJobVertices(final HaierExecutionGraph haierExecutionGraph) {
         final Set<Integer> ret = new HashSet<>();
-        final ArrayList<ScheduledJobVertex> scheduledJobVertices = flinkExecutionGraph.getScheduledJobVertices();
+        final ArrayList<ScheduledJobVertex> scheduledJobVertices = haierExecutionGraph.getScheduledJobVertices();
 
         final Stack<Integer> stack = new Stack<>();
-        stack.addAll(flinkExecutionGraph.findRootJobVertices());
-        final boolean[] visited = new boolean[flinkExecutionGraph.getJobVertices().length];
+        stack.addAll(haierExecutionGraph.findRootJobVertices());
+        final boolean[] visited = new boolean[haierExecutionGraph.getJobVertices().length];
         while (!stack.isEmpty()) {
             final int current = stack.pop();
             if (visited[current]) {
                 continue;
             }
-            if (FlinkExecutionGraph.isComputational(scheduledJobVertices.get(current).getJobVertex())) {
+            if (HaierExecutionGraph.isComputational(scheduledJobVertices.get(current).getJobVertex())) {
                 ret.add(current);
-                for (Integer vertex : flinkExecutionGraph.getSubDAGInclusive(scheduledJobVertices.get(current))) {
+                for (Integer vertex : haierExecutionGraph.getSubDAGInclusive(scheduledJobVertices.get(current))) {
                     visited[vertex] = true;
                 }
             } else {
@@ -79,16 +88,16 @@ public abstract class TimeEvaluationAlgorithm {
     }
 
     /**
-     * Given a {@link FlinkExecutionGraph}, deduce the associated {@link ComputationalGraph}; i.e. the DAG comprised
+     * Given a {@link HaierExecutionGraph}, deduce the associated {@link ComputationalGraph}; i.e. the DAG comprised
      * only of the vertices that represent computational tasks offloadable to heterogeneous architectures supported
      * by E2Data.
      *
      * ~ O(V+E)
      *
-     * @param flinkExecutionGraph The initial {@link FlinkExecutionGraph}.
+     * @param haierExecutionGraph The initial {@link HaierExecutionGraph}.
      * @return The produced {@link ComputationalGraph}.
      */
-    protected final ComputationalGraph deduceComputationalGraph(final FlinkExecutionGraph flinkExecutionGraph) {
+    protected final ComputationalGraph deduceComputationalGraph(final HaierExecutionGraph haierExecutionGraph) {
         class SubDAGPair {
             final ScheduledJobVertex scheduledJobVertex;
             final int lastComputationalParent;
@@ -103,19 +112,19 @@ public abstract class TimeEvaluationAlgorithm {
             }
         }
 
-        final ArrayList<ScheduledJobVertex> scheduledJobVertices = flinkExecutionGraph.getScheduledJobVertices();
+        final ArrayList<ScheduledJobVertex> scheduledJobVertices = haierExecutionGraph.getScheduledJobVertices();
         final Map<ScheduledJobVertex, ComputationalJobVertex> compVertices = new HashMap<>();
         final boolean[] visited = new boolean[scheduledJobVertices.size()];  // Must be all initialized to false.
 
         final Stack<SubDAGPair> stack = new Stack<>();
-        for (int rootIndex : flinkExecutionGraph.findRootJobVertices()) {
+        for (int rootIndex : haierExecutionGraph.findRootJobVertices()) {
             stack.add(new SubDAGPair(scheduledJobVertices.get(rootIndex), -1));
         }
 
         // Create the set of the new ComputationalJobVertex objects for the new ComputationalGraph.
         while (!stack.isEmpty()) {
             final SubDAGPair current = stack.pop();
-            if (FlinkExecutionGraph.isComputational(current.scheduledJobVertex)) {
+            if (HaierExecutionGraph.isComputational(current.scheduledJobVertex)) {
                 final ComputationalJobVertex computationalJobVertex;
                 if (visited[current.scheduledJobVertex.getJobVertexIndex()]) {
                     computationalJobVertex = compVertices.get(current.scheduledJobVertex);
@@ -156,7 +165,7 @@ public abstract class TimeEvaluationAlgorithm {
             compJobVertex.translateParents(indexMapping);
         }
 
-        final ComputationalGraph ret = new ComputationalGraph(flinkExecutionGraph, newVertices, indexMapping);
+        final ComputationalGraph ret = new ComputationalGraph(haierExecutionGraph, newVertices, indexMapping);
         ret.updateChildren();
         return ret;
     }

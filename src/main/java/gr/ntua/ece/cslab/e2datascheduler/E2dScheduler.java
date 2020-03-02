@@ -1,13 +1,13 @@
 package gr.ntua.ece.cslab.e2datascheduler;
 
 import gr.ntua.ece.cslab.e2datascheduler.beans.optpolicy.OptimizationPolicy;
-import gr.ntua.ece.cslab.e2datascheduler.graph.FlinkExecutionGraph;
+import gr.ntua.ece.cslab.e2datascheduler.graph.HaierExecutionGraph;
 import gr.ntua.ece.cslab.e2datascheduler.ml.Model;
 import gr.ntua.ece.cslab.e2datascheduler.ml.ModelLibrary;
 import gr.ntua.ece.cslab.e2datascheduler.ml.impl.DemoModel;
 import gr.ntua.ece.cslab.e2datascheduler.ml.impl.DummyModel;
 import gr.ntua.ece.cslab.e2datascheduler.optimizer.Optimizer;
-import gr.ntua.ece.cslab.e2datascheduler.optimizer.nsga.NSGAIIFlinkOptimizer;
+import gr.ntua.ece.cslab.e2datascheduler.optimizer.nsga.NSGAIIHaierOptimizer;
 
 import org.apache.flink.runtime.jobgraph.JobGraph;
 
@@ -54,7 +54,7 @@ public class E2dScheduler {
                 default: break;
             }
         }
-        optimizer = new NSGAIIFlinkOptimizer();
+        optimizer = new NSGAIIHaierOptimizer();
     }
 
     public static E2dScheduler getInstance(){
@@ -64,8 +64,8 @@ public class E2dScheduler {
         return scheduler;
     }
 
-    public FlinkExecutionGraph schedule(JobGraph jobGraph, OptimizationPolicy policy) {
-        Model selectedModel = null;
+    public HaierExecutionGraph schedule(JobGraph jobGraph, OptimizationPolicy policy) {
+        Model selectedModel;
         if (policy.getMlModel() == null || !this.models.containsKey(policy.getMlModel())) {
             selectedModel = this.models.get(DEFAULT_MODEL);
             //selectedModel = new DemoModel();
@@ -74,7 +74,7 @@ public class E2dScheduler {
         }
 
         return this.optimizer.optimize(jobGraph, policy, selectedModel);
-        //return new NSGAIIFlinkOptimizer().optimize(jobGraph, policy, selectedModel);
+        //return new NSGAIIHaierOptimizer().optimize(jobGraph, policy, selectedModel);
     }
 
 }

@@ -2,7 +2,7 @@ package gr.ntua.ece.cslab.e2datascheduler.optimizer.nsga.exhaustivetimeevaluatio
 
 import gr.ntua.ece.cslab.e2datascheduler.graph.ComputationalGraph;
 import gr.ntua.ece.cslab.e2datascheduler.graph.ComputationalJobVertex;
-import gr.ntua.ece.cslab.e2datascheduler.graph.FlinkExecutionGraph;
+import gr.ntua.ece.cslab.e2datascheduler.graph.HaierExecutionGraph;
 import gr.ntua.ece.cslab.e2datascheduler.ml.Model;
 import gr.ntua.ece.cslab.e2datascheduler.optimizer.nsga.TimeEvaluationAlgorithm;
 
@@ -18,7 +18,7 @@ public class ExhaustiveEvaluation extends TimeEvaluationAlgorithm {
 
     /**
      * The currently tracked {@link Graph}, deduced by the {@link ComputationalGraph} that has been extracted by the
-     * {@link FlinkExecutionGraph}.
+     * {@link HaierExecutionGraph}.
      * It is first initialized every time method {@code initialization()} is called, and later used to evaluate the
      * execution time every time {@code calculateExecutionTime} is called.
      */
@@ -43,11 +43,11 @@ public class ExhaustiveEvaluation extends TimeEvaluationAlgorithm {
      * Calling this method before calling the {@code calculateExecutionTime()} method is a requirement
      * for this subclass of {@link TimeEvaluationAlgorithm}.
      *
-     * @param flinkExecutionGraph The related {@link FlinkExecutionGraph} at hand.
+     * @param haierExecutionGraph The related {@link HaierExecutionGraph} at hand.
      */
     @Override
-    public void initialization(final FlinkExecutionGraph flinkExecutionGraph) {
-        final ComputationalGraph computationalGraph = this.deduceComputationalGraph(flinkExecutionGraph);
+    public void initialization(final HaierExecutionGraph haierExecutionGraph) {
+        final ComputationalGraph computationalGraph = this.deduceComputationalGraph(haierExecutionGraph);
 
         final List<Task> tasks = new ArrayList<>(computationalGraph.getComputationalJobVertices().size());
         for (ComputationalJobVertex computationalJobVertex : computationalGraph.getComputationalJobVertices()) {
@@ -69,14 +69,14 @@ public class ExhaustiveEvaluation extends TimeEvaluationAlgorithm {
     // --------------------------------------------------------------------------------------------
 
     /**
-     * Calculate the estimated execution time of the given {@link FlinkExecutionGraph}.
+     * Calculate the estimated execution time of the given {@link HaierExecutionGraph}.
      * Method {@code initialization()} must have been called before calling this method.
      *
-     * @param flinkExecutionGraph The related {@link FlinkExecutionGraph} at hand.
+     * @param haierExecutionGraph The related {@link HaierExecutionGraph} at hand.
      * @return A double-precision floating-point number that represents the evaluation
      */
     @Override
-    public double calculateExecutionTime(final FlinkExecutionGraph flinkExecutionGraph) {
+    public double calculateExecutionTime(final HaierExecutionGraph haierExecutionGraph) {
         return median(this.graph.haierEvaluation());
     }
 

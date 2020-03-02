@@ -3,7 +3,7 @@ package gr.ntua.ece.cslab.e2datascheduler.optimizer.nsga;
 import gr.ntua.ece.cslab.e2datascheduler.beans.cluster.HwResource;
 import gr.ntua.ece.cslab.e2datascheduler.beans.optpolicy.Objective;
 import gr.ntua.ece.cslab.e2datascheduler.beans.optpolicy.OptimizationPolicy;
-import gr.ntua.ece.cslab.e2datascheduler.graph.FlinkExecutionGraph;
+import gr.ntua.ece.cslab.e2datascheduler.graph.HaierExecutionGraph;
 import gr.ntua.ece.cslab.e2datascheduler.graph.ScheduledJobVertex;
 import gr.ntua.ece.cslab.e2datascheduler.ml.Model;
 import gr.ntua.ece.cslab.e2datascheduler.optimizer.nsga.exhaustivetimeevaluation.ExhaustiveEvaluation;
@@ -24,13 +24,14 @@ import java.util.ResourceBundle;
 
 import java.util.logging.Logger;
 
-/**
- * Class that implements the main functionalities of the NSGAII algorithm, i.e.,
- * the 'newSolution' and 'evaluate' methods
- */
-public class NSGAIIFlinkPlanning extends AbstractProblem {
 
-    private static final Logger logger = Logger.getLogger(NSGAIIFlinkPlanning.class.getCanonicalName());
+/**
+ * A class that implements the core evaluation functionality for the NSGAII genetic algorithm
+ * through the MOEA Framework, i.e. the methods {@code newSolution()} and {@code evaluate()}.
+ */
+public class NSGAIIHaierPlanning extends AbstractProblem {
+
+    private static final Logger logger = Logger.getLogger(NSGAIIHaierPlanning.class.getCanonicalName());
 
     public static ResourceBundle resourceBundle = ResourceBundle.getBundle("config");
     private static String timeEvalAlgorithm = resourceBundle.getString("optimizer.evalAlgorithm").toLowerCase();
@@ -72,7 +73,7 @@ public class NSGAIIFlinkPlanning extends AbstractProblem {
     /**
      * It stores all found solutions.
      */
-    final Map<Solution, FlinkExecutionGraph> solutionGraphs;
+    final Map<Solution, HaierExecutionGraph> solutionGraphs;
 
     /**
      * timeEvaluator is a GOF Strategy handle for the implementation of
@@ -82,12 +83,25 @@ public class NSGAIIFlinkPlanning extends AbstractProblem {
 
     // -------------------------------------------------------------------------------------------
 
-    public NSGAIIFlinkPlanning(List<HwResource> devices, Model mlModel, JobGraph jobGraph, OptimizationPolicy policy){
+    /**
+     * A class that implements the core evaluation functionality for the NSGAII genetic algorithm
+     * through the MOEA Framework, i.e. the methods {@code newSolution()} and {@code evaluate()}.
+     *
+     * @param devices The available {@link HwResource}s in the cluster.
+     * @param mlModel The Machine Learning {@link Model} to be consulted for the prediction of execution time for each
+     *                task.
+     * @param jobGraph The initial Flink {@link JobGraph}.
+     * @param policy The {@link OptimizationPolicy} to base upon the solution to the multi-objective optimization
+     *               problem at hand.
+     */
+    public NSGAIIHaierPlanning(
+            final List<HwResource> devices,
+            final Model mlModel,
+            final JobGraph jobGraph,
+            final OptimizationPolicy policy){
         super(jobGraph.getNumberOfVertices(), policy.getNumberOfObjectives());
         this.devices = new ArrayList<HwResource>();
-        for (HwResource r : devices) {
-            this.devices.add(r);
-        }
+        this.devices.addAll(devices);
         this.mlModel = mlModel;
         this.jobGraph = jobGraph;
         this.jobVertices = initializeJobVertices(jobGraph);
@@ -112,10 +126,13 @@ public class NSGAIIFlinkPlanning extends AbstractProblem {
     }
 
     /**
-     * Auxiliary method to initialize the array of JobVertex objects.
+     * Auxiliary method to initialize the array of {@link JobVertex} objects.
      *
-     * First, it attempts to retrieve them topologically sorted; if that does
-     * not work well, it falls back to random order.
+     * First, it attempts to retrieve them topologically sorted;
+     * if that does not work well, it falls back to random order.
+     *
+     * @param jobGraph The initial Flink's {@link JobGraph} object.
+     * @return A list of {@link JobVertex} objects included in the given {@link JobGraph}.
      */
     private JobVertex[] initializeJobVertices(final JobGraph jobGraph) {
         try {
@@ -130,9 +147,10 @@ public class NSGAIIFlinkPlanning extends AbstractProblem {
     // -------------------------------------------------------------------------------------------
 
     /**
-     * This method is automatically invoked by the MOEA framework at each
-     * generation/iteration of the genetic algorithm.
-     * @return a candidate solution for the optimization problem
+     * This method is automatically invoked by the MOEA framework at
+     * each generation/iteration of the NSGAII genetic algorithm.
+     *
+     * @return A candidate {@link Solution} for the multi-objective optimization problem at hand.
      */
     @Override
     public Solution newSolution() {
@@ -146,16 +164,16 @@ public class NSGAIIFlinkPlanning extends AbstractProblem {
     }
 
     /**
-     * Method that evaluates how good or bad a candidate solution is.
-     * The result of the evaluation is stored in the
-     * {@link org.moeaframework.core.Solution} object itself.
-     * @param solution A candidate solution produced by the MOEA framework.
+     * Method that evaluates how good or bad a candidate {@link Solution} is.
+     * The result of the evaluation is stored in the {@link Solution} object itself.
+     *
+     * @param solution A candidate {@link Solution} for the MOEA framework.
      */
     @Override
     public void evaluate(Solution solution) {
-        final FlinkExecutionGraph flinkExecutionGraph = constructFlinkExecutionGraph(EncodingUtils.getInt(solution));
-        final Map<String, Double> objectiveCosts = flinkExecutionGraph.getObjectiveCosts();
-        this.solutionGraphs.put(solution, flinkExecutionGraph);
+        final HaierExecutionGraph haierExecutionGraph = constructHaierExecutionGraph(EncodingUtils.getInt(solution));
+        final Map<String, Double> objectiveCosts = haierExecutionGraph.getObjectiveCosts();
+        this.solutionGraphs.put(solution, haierExecutionGraph);
 
         // TODO(ckatsak): For now, objectives are identified via String objects.
         //                This should probably change. Maybe Enums + Visitor ?
@@ -163,10 +181,10 @@ public class NSGAIIFlinkPlanning extends AbstractProblem {
             double costEstimation = Double.NEGATIVE_INFINITY;
             switch (objective) {
                 case "execTime":
-                    costEstimation = this.timeEvaluator.calculateExecutionTime(flinkExecutionGraph);
+                    costEstimation = this.timeEvaluator.calculateExecutionTime(haierExecutionGraph);
                     break;
                 case "powerCons":
-                    costEstimation = this.calculatePowerConsumption(flinkExecutionGraph);
+                    costEstimation = this.calculatePowerConsumption(haierExecutionGraph);
                     break;
                 default:
                     // FIXME(ckatsak): This should be unreachable; yet, it depends on the input
@@ -183,36 +201,41 @@ public class NSGAIIFlinkPlanning extends AbstractProblem {
     }
 
     /**
-     * Construct the FlinkExecutionGraph imposed by the the given solution's
-     * plan.
+     * Construct the {@link HaierExecutionGraph} imposed by the the given solution's assignment plan.
+     *
+     * FIXME(gmytil): What happens if a resource assigned by the plan is already in use?
+     *
+     * @param plan The plan ({@link JobVertex} to {@link HwResource}) to be evaluated, produced by the MOEA Framework
+     *             using the NSGAII genetic algorithm.
+     * @return The {@link HaierExecutionGraph} that represents the given assignment plan.
      */
-    //FIXME: (gmytil) What happens if a resource assigned by the plan is already in use?
-    private FlinkExecutionGraph constructFlinkExecutionGraph(final int[] plan) {
+    private HaierExecutionGraph constructHaierExecutionGraph(final int[] plan) {
         assert plan.length == this.jobVertices.length : "plan.length != jobVertices.length";
 
-        /* Construct the FlinkExecutionGraph. */
-        final FlinkExecutionGraph flinkExecutionGraph = new FlinkExecutionGraph(this.jobGraph, this.jobVertices);
+        // Construct the HaierExecutionGraph.
+        final HaierExecutionGraph haierExecutionGraph = new HaierExecutionGraph(this.jobGraph, this.jobVertices);
 
-        /* Annotate each ScheduledJobVertex with its assigned hardware resource
-         * according to the current plan. */
+        // Annotate each ScheduledJobVertex with its assigned hardware resource according to the current plan.
         for (int jobVertexIndex = 0; jobVertexIndex < plan.length; jobVertexIndex++) {
-            flinkExecutionGraph.assignResource(jobVertexIndex, this.devices.get(plan[jobVertexIndex]));
+            haierExecutionGraph.assignResource(jobVertexIndex, this.devices.get(plan[jobVertexIndex]));
         }
 
-        /* Construct Layer objects and annotate the graph. */
-        //flinkExecutionGraph.timeEvaluatorInitialization();
-        timeEvaluator.initialization(flinkExecutionGraph);
+        // Initialize the TimeEvaluationAlgorithm (e.g. construct the Layer objects for Layered time evaluation).
+        timeEvaluator.initialization(haierExecutionGraph);
 
-        return flinkExecutionGraph;
+        return haierExecutionGraph;
     }
 
     /**
-     * Calculate the total power consumption for the given FlinkExecutionGraph.
+     * Calculate the total power consumption for the given {@link HaierExecutionGraph}.
+     *
+     * @param haierExecutionGraph The given {@link HaierExecutionGraph} to calculate its power consumption.
+     * @return A value that represents the given {@link HaierExecutionGraph}'s total power consumption.
      */
-    private double calculatePowerConsumption(final FlinkExecutionGraph flinkExecutionGraph) {
+    private double calculatePowerConsumption(final HaierExecutionGraph haierExecutionGraph) {
         double totalConsumption = 0.0d;
 
-        for (ScheduledJobVertex scheduledJobVertex : flinkExecutionGraph.getScheduledJobVertices()) {
+        for (ScheduledJobVertex scheduledJobVertex : haierExecutionGraph.getScheduledJobVertices()) {
             // XXX(ckatsak): Two versions: one using the FeatureExtractor and another
             // one passing the source code to the Model, as per @kbitsak 's preference.
             totalConsumption += this.mlModel.predict("powerCons",

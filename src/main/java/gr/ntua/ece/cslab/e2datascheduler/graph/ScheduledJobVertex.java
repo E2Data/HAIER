@@ -10,7 +10,7 @@ import java.util.List;
 public class ScheduledJobVertex {
 
     /**
-     * The index of the corresponding {@link JobVertex} object, known by {@link FlinkExecutionGraph} (i.e. internal
+     * The index of the corresponding {@link JobVertex} object, known by {@link HaierExecutionGraph} (i.e. internal
      * to HAIER).
      */
     private final int jobVertexIndex;

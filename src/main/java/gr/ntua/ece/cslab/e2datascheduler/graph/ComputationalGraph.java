@@ -2,17 +2,18 @@ package gr.ntua.ece.cslab.e2datascheduler.graph;
 
 import java.util.ArrayList;
 
+
 /**
- * An auxiliary class that for the DAG extracted by a {@link FlinkExecutionGraph} but comprised only of those
+ * An auxiliary class that for the DAG extracted by a {@link HaierExecutionGraph} but comprised only of those
  * vertices that represent computational workloads that can be offloaded to some heterogeneous architecture
  * supported by E2Data.
  */
 public class ComputationalGraph {
 
     /**
-     * The initial {@link FlinkExecutionGraph} off which this {@code ComputationalGraph} has been created.
+     * The initial {@link HaierExecutionGraph} off which this {@code ComputationalGraph} has been created.
      */
-    private final FlinkExecutionGraph flinkExecutionGraph;
+    private final HaierExecutionGraph haierExecutionGraph;
     /**
      * indexMapping contains the mapping between the (internal to HAIER) IDs of {@link ComputationalJobVertex} to
      * {@link ScheduledJobVertex}.
@@ -38,11 +39,11 @@ public class ComputationalGraph {
     // --------------------------------------------------------------------------------------------
 
     /**
-     * An auxiliary class that for the DAG extracted by a {@link FlinkExecutionGraph} but comprised only of those
+     * An auxiliary class that for the DAG extracted by a {@link HaierExecutionGraph} but comprised only of those
      * vertices that represent computational workloads that can be offloaded to some heterogeneous architecture
      * supported by E2Data.
      *
-     * @param flinkExecutionGraph The initial {@link FlinkExecutionGraph} off which the new {@code ComputationalGraph}
+     * @param haierExecutionGraph The initial {@link HaierExecutionGraph} off which the new {@code ComputationalGraph}
      *                            will be created.
      * @param computationalJobVertices Enables an adjacency list-like representation of the {@code ComputationalGraph}.
      * @param indexMapping indexMapping contains the mapping between the (internal to HAIER) IDs of
@@ -51,10 +52,10 @@ public class ComputationalGraph {
      *                     corresponds to the {@link ComputationalJobVertex} with {@code ID == 3}.
      */
     public ComputationalGraph(
-            final FlinkExecutionGraph flinkExecutionGraph,
+            final HaierExecutionGraph haierExecutionGraph,
             final ArrayList<ComputationalJobVertex> computationalJobVertices,
             final ArrayList<Integer> indexMapping) {
-        this.flinkExecutionGraph = flinkExecutionGraph;
+        this.haierExecutionGraph = haierExecutionGraph;
         this.indexMapping = indexMapping;
         this.computationalJobVertices = computationalJobVertices;
         this.roots = new ArrayList<>();
