@@ -30,6 +30,6 @@ public abstract class Model {
     //FIXME: (gmytil) A model refers to a specific objective and hardware device. Thus, it should accept only the
     // source code as input parameter. Indexing models by objectives and devices should be taking place at the
     // models library level.
-    public abstract double predict(String objective, HwResource device, String sourceCode);
+    public abstract double predict(final String objective, final HwResource device, final String sourceCode);
     //public abstract double predict(String objective, HwResource device, List<Double> featureVector);
 }

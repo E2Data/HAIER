@@ -5,7 +5,7 @@ import gr.ntua.ece.cslab.e2datascheduler.graph.HaierExecutionGraph;
 import gr.ntua.ece.cslab.e2datascheduler.ml.Model;
 import gr.ntua.ece.cslab.e2datascheduler.ml.ModelLibrary;
 import gr.ntua.ece.cslab.e2datascheduler.ml.impl.DemoModel;
-import gr.ntua.ece.cslab.e2datascheduler.ml.impl.DummyModel;
+import gr.ntua.ece.cslab.e2datascheduler.ml.impl.DummyCSLabModel;
 import gr.ntua.ece.cslab.e2datascheduler.optimizer.Optimizer;
 import gr.ntua.ece.cslab.e2datascheduler.optimizer.nsga.NSGAIIHaierOptimizer;
 
@@ -39,9 +39,9 @@ public class E2dScheduler {
                 case "linearRegression": {
                     //FIXME: (gmytil) For now, I instantiate a dummy model. In the regular case, I will load one
                     // from disk with kbitsak's code
-                    Model dummyModel = new DummyModel();
-                    dummyModel.load(modelPath);
-                    models.put(modelName, dummyModel);
+                    Model dummyCsLabModel = new DummyCSLabModel();
+                    dummyCsLabModel.load(modelPath);
+                    models.put(modelName, dummyCsLabModel);
                     break;
                 }
                 case "demo": {

@@ -3,7 +3,7 @@ package gr.ntua.ece.cslab.e2datascheduler.beans.features;
 import java.util.ArrayList;
 import java.util.List;
 
-public class FeatureVector {
+public class CSLabFeatureVector {
 
       private double AggOps;
       private double BinOps;

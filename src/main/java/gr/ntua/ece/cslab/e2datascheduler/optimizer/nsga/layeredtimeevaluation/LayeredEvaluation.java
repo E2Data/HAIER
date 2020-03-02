@@ -195,7 +195,7 @@ public class LayeredEvaluation extends TimeEvaluationAlgorithm {
         double sum = 0.0d;
 
         for (ComputationalJobVertex computationalJobVertex : computationalJobVertices) {
-            // FIXME(ckatsak): Two versions: one using the FeatureExtractor and another one
+            // FIXME(ckatsak): Two versions: one using the CSLabFeatureExtractor and another one
             //                 passing the source code to the Model, as per @kbitsak 's preference.
 
             // FIXME(ckatsak): Temporarily using associated ScheduledJobVertex's sourceCode field.
@@ -208,7 +208,7 @@ public class LayeredEvaluation extends TimeEvaluationAlgorithm {
                     scheduledJobVertex.getSourceCode());
             //sum += this.mlModel.predict("execTime",
             //        scheduledJobVertex.getAssignedResource(),
-            //        FeatureExtractor.extract(scheduledJobVertex.getSourceCode()));
+            //        CSLabFeatureExtractor.extract(scheduledJobVertex.getSourceCode()));
         }
 
         return sum;
