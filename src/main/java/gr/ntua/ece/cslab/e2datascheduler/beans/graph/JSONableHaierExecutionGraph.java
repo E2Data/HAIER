@@ -2,7 +2,7 @@ package gr.ntua.ece.cslab.e2datascheduler.beans.graph;
 
 import com.google.gson.GsonBuilder;
 
-public class JSONableFlinkExecutionGraph {
+public class JSONableHaierExecutionGraph {
 
     private JSONableScheduledJobVertex[] scheduledJobVertices;
 

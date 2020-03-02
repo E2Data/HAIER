@@ -2,7 +2,7 @@ package gr.ntua.ece.cslab.e2datascheduler.ws;
 
 import gr.ntua.ece.cslab.e2datascheduler.E2dScheduler;
 import gr.ntua.ece.cslab.e2datascheduler.beans.optpolicy.OptimizationPolicy;
-import gr.ntua.ece.cslab.e2datascheduler.graph.FlinkExecutionGraph;
+import gr.ntua.ece.cslab.e2datascheduler.graph.HaierExecutionGraph;
 
 import org.apache.flink.runtime.jobgraph.JobGraph;
 
@@ -63,7 +63,7 @@ public class SchedulerService extends AbstractE2DataService {
             @FormDataParam("file") InputStream uploadedInputStream,
             @FormDataParam("file") FormDataContentDisposition fileDetail) {
 
-        final String filePath = this.tmpRootPath + fileDetail.getFileName();
+        final String filePath = tmpRootPath + fileDetail.getFileName();
 
         try {
             SchedulerService.persistSerializedJobGraphFile(uploadedInputStream, filePath);
@@ -74,7 +74,7 @@ public class SchedulerService extends AbstractE2DataService {
             return generateResponse(Response.Status.INTERNAL_SERVER_ERROR, "Error retrieving JobGraph file '" + fileDetail.getFileName() + "'.");
         }
 
-        JobGraph jobGraph = null;
+        JobGraph jobGraph;
         try (final ObjectInputStream objectIn = new ObjectInputStream(new FileInputStream(filePath))) {
             jobGraph = (JobGraph) objectIn.readObject();
             logger.info("Deserialized '" + jobGraph + "' from file '" + filePath + "'.");
@@ -108,17 +108,20 @@ public class SchedulerService extends AbstractE2DataService {
                             "}" +
                         "}";
 
-        final FlinkExecutionGraph result = this.scheduler.schedule(jobGraph, OptimizationPolicy.parseJSON(policyStr));
+        final HaierExecutionGraph result = this.scheduler.schedule(jobGraph, OptimizationPolicy.parseJSON(policyStr));
 
         logger.info("Scheduling result for '" + jobGraph.toString() + "':\n\n" + result.toString() + "\n\nEnd of scheduling result.\n");
 
         return generateResponse(Response.Status.OK, "JobGraph '" + jobGraph.toString() + "' has been scheduled successfully!");
     }
 
-    private static void persistSerializedJobGraphFile(final InputStream uploadedInputStream, final String filePath) throws IOException {
+    private static void persistSerializedJobGraphFile(
+            final InputStream uploadedInputStream,
+            final String filePath)
+            throws IOException {
         final FileOutputStream out = new FileOutputStream(new File(filePath));
         final byte[] bytes = new byte[8192];  // XXX(ckatsak): looks dirty; is it optimal?
-        int read = 0;
+        int read;
         while ((read = uploadedInputStream.read(bytes)) != -1) {
             //logger.info("Just read " + read + " bytes from the file being uploaded.");
             out.write(bytes, 0, read);

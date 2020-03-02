@@ -1,7 +1,7 @@
 package gr.ntua.ece.cslab.e2datascheduler.graph;
 
 import gr.ntua.ece.cslab.e2datascheduler.beans.cluster.HwResource;
-import gr.ntua.ece.cslab.e2datascheduler.beans.graph.JSONableFlinkExecutionGraph;
+import gr.ntua.ece.cslab.e2datascheduler.beans.graph.JSONableHaierExecutionGraph;
 import gr.ntua.ece.cslab.e2datascheduler.beans.graph.JSONableScheduledJobVertex;
 
 import org.apache.flink.runtime.jobgraph.IntermediateDataSet;
@@ -21,17 +21,17 @@ import java.util.Set;
 
 
 /**
- * A mapping between a JobGraph's JobVertex objects and the devices that they
- * have been assigned to.
+ * A mapping between an Apache FLink's {@link JobGraph}'s {@link JobVertex} objects and the {@link HwResource}s
+ * that they have been assigned to.
  */
-public class FlinkExecutionGraph {
+public class HaierExecutionGraph {
 
     private final JobGraph jobGraph;
     private final JobVertex[] jobVertices;
 
     /**
-     * An ArrayList of ScheduledJobVertex objects, in the same order as their
-     * corresponding JobVertex objects in this.jobVertices.
+     * An {@link ArrayList} of {@link ScheduledJobVertex} objects, in the same order as their
+     * corresponding {@link JobVertex} objects in field {@code this.jobVertices}.
      */
     private final ArrayList<ScheduledJobVertex> scheduledJobVertices;
 
@@ -42,7 +42,14 @@ public class FlinkExecutionGraph {
 
     // --------------------------------------------------------------------------------------------
 
-    public FlinkExecutionGraph(JobGraph jobGraph, JobVertex[] jobVertices) {
+    /**
+     * A mapping between an Apache Flink's {@link JobGraph}'s {@link JobVertex} objects and the {@link HwResource}s
+     * that they have been assigned to.
+     *
+     * @param jobGraph The {@link JobGraph} that this {@link HaierExecutionGraph} is based upon.
+     * @param jobVertices An array of the {@link JobVertex} objects to be included in this {@link HaierExecutionGraph}.
+     */
+    public HaierExecutionGraph(final JobGraph jobGraph, final JobVertex[] jobVertices) {
         this.jobGraph = jobGraph;
         this.jobVertices = jobVertices;
         this.objectiveCosts = new HashMap<>();
@@ -93,7 +100,7 @@ public class FlinkExecutionGraph {
     // --------------------------------------------------------------------------------------------
 
     /**
-     * Find and return the root vertices for the JobGraph related to this FlinkExecutionGraph.
+     * Find and return the root vertices for the JobGraph related to this HaierExecutionGraph.
      *
      * ~ O(V)
      */
@@ -153,7 +160,7 @@ public class FlinkExecutionGraph {
      * @return {@code true} if it can be offloaded; {@code false} otherwise.
      */
     public static boolean isComputational(final JobVertex jobVertex) {
-        for (String name : FlinkExecutionGraph.NON_COMPUTATIONAL_OPERATOR_NAMES) {
+        for (String name : HaierExecutionGraph.NON_COMPUTATIONAL_OPERATOR_NAMES) {
             if (jobVertex.getName().startsWith(name)) {
                 return false;
             }
@@ -169,18 +176,18 @@ public class FlinkExecutionGraph {
      * @return {@code true} if it can be offloaded; {@code false} otherwise.
      */
     public static boolean isComputational(final ScheduledJobVertex scheduledJobVertex) {
-        return FlinkExecutionGraph.isComputational(scheduledJobVertex.getJobVertex());
+        return HaierExecutionGraph.isComputational(scheduledJobVertex.getJobVertex());
     }
 
     /**
-     * @return a JSON-formatted {@link JSONableFlinkExecutionGraph}.
+     * @return a JSON-formatted {@link JSONableHaierExecutionGraph}.
      */
     @Override
     public String toString() {
         final List<Integer> schedulableIndices = new ArrayList<>();
         outer:
         for (int i = 0; i < this.jobVertices.length; i++) {
-            for (String name : FlinkExecutionGraph.NON_COMPUTATIONAL_OPERATOR_NAMES) {
+            for (String name : HaierExecutionGraph.NON_COMPUTATIONAL_OPERATOR_NAMES) {
                 if (this.jobVertices[i].getName().startsWith(name)) {
                     continue outer;
                 }
@@ -188,7 +195,7 @@ public class FlinkExecutionGraph {
             schedulableIndices.add(i);
         }
 
-        final List<JSONableScheduledJobVertex> vs = new ArrayList<JSONableScheduledJobVertex>(schedulableIndices.size());
+        final List<JSONableScheduledJobVertex> vs = new ArrayList<>(schedulableIndices.size());
         for (int i : schedulableIndices) {
             JSONableScheduledJobVertex v = new JSONableScheduledJobVertex();
             v.setId(this.jobVertices[i].getID());
@@ -203,10 +210,10 @@ public class FlinkExecutionGraph {
             vs.add(v);
         }
 
-        final JSONableFlinkExecutionGraph jfeg = new JSONableFlinkExecutionGraph();
-        jfeg.setJSONableScheduledJobVertices(vs.toArray(new JSONableScheduledJobVertex[schedulableIndices.size()]));
+        final JSONableHaierExecutionGraph jheg = new JSONableHaierExecutionGraph();
+        jheg.setJSONableScheduledJobVertices(vs.toArray(new JSONableScheduledJobVertex[schedulableIndices.size()]));
 
-        return new GsonBuilder().setPrettyPrinting().create().toJson(jfeg);
+        return new GsonBuilder().setPrettyPrinting().create().toJson(jheg);
     }
 
 }
