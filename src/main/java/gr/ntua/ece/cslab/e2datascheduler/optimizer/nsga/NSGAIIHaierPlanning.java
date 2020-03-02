@@ -236,13 +236,13 @@ public class NSGAIIHaierPlanning extends AbstractProblem {
         double totalConsumption = 0.0d;
 
         for (ScheduledJobVertex scheduledJobVertex : haierExecutionGraph.getScheduledJobVertices()) {
-            // XXX(ckatsak): Two versions: one using the FeatureExtractor and another
+            // XXX(ckatsak): Two versions: one using the CSLabFeatureExtractor and another
             // one passing the source code to the Model, as per @kbitsak 's preference.
             totalConsumption += this.mlModel.predict("powerCons",
                                                      scheduledJobVertex.getAssignedResource(),
                                                      scheduledJobVertex.getSourceCode());
             //totalConsumption += this.mlModel.predict("powerCons", scheduledJobVertex.getAssignedResource(),
-            //        FeatureExtractor.extract(scheduledJobVertex.getSourceCode()));
+            //        CSLabFeatureExtractor.extract(scheduledJobVertex.getSourceCode()));
         }
 
         return totalConsumption;

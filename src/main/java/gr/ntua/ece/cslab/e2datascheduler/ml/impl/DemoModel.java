@@ -2,7 +2,6 @@ package gr.ntua.ece.cslab.e2datascheduler.ml.impl;
 
 import gr.ntua.ece.cslab.e2datascheduler.beans.cluster.HwResource;
 import gr.ntua.ece.cslab.e2datascheduler.ml.Model;
-import gr.ntua.ece.cslab.e2datascheduler.ml.util.FeatureExtractor;
 
 import com.google.gson.Gson;
 
@@ -12,11 +11,8 @@ import java.io.InputStreamReader;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.List;
-import java.util.Random;
 
 /**
  * Dummy class that mocks a model and serves integration purposes
@@ -53,7 +49,10 @@ public class DemoModel extends Model {
     public void load(String path) {}
 
     @Override
-    public double predict(String objective, HwResource device, String sourceCode) {
+    public double predict(
+            final String objective,
+            final HwResource device,
+            final String sourceCode) {
         // FIXME(ckatsak): objective is ignored by the corresponding model for
         //                 now: only the execution time is predicted, but the
         //                 same prediction is returned for power consumption.

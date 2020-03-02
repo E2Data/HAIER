@@ -2,7 +2,7 @@ package gr.ntua.ece.cslab.e2datascheduler.ml.impl;
 
 import gr.ntua.ece.cslab.e2datascheduler.beans.cluster.HwResource;
 import gr.ntua.ece.cslab.e2datascheduler.ml.Model;
-import gr.ntua.ece.cslab.e2datascheduler.ml.util.FeatureExtractor;
+import gr.ntua.ece.cslab.e2datascheduler.ml.util.CSLabFeatureExtractor;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -14,9 +14,9 @@ import java.util.logging.Logger;
 /**
  * Dummy class that mocks a model and serves integration purposes
  */
-public class DummyModel extends Model {
+public class DummyCSLabModel extends Model {
 
-    private static final Logger logger = Logger.getLogger(DummyModel.class.getCanonicalName());
+    private static final Logger logger = Logger.getLogger(DummyCSLabModel.class.getCanonicalName());
 
     /**
      * Predictions for all kernels can be cached here for future use.
@@ -29,10 +29,16 @@ public class DummyModel extends Model {
     public void load(String path) {}
 
     @Override
-    public double predict(String objective, HwResource device, String sourceCode) {
+    public double predict(
+            final String objective,
+            final HwResource device,
+            final String sourceCode) {
         if (!this.predictionCache.containsKey(sourceCode)) {
-            final List<Double> inputFeatures = FeatureExtractor.getInstance().extract(sourceCode);
-            logger.info("[DummyModel] Features retrieved: " + inputFeatures);
+            // FIXME(ckatsak): CSLabFeatureExtractor must be run as a separate microservice, so we
+            //                 may keep it commented it out for now to make HAIER easier to deploy.
+            logger.info("Feature extraction is happening here...");
+            //final List<Double> inputFeatures = CSLabFeatureExtractor.getInstance().extract(sourceCode);
+            //logger.info("Features retrieved: " + inputFeatures);
 
             // XXX(ckatsak): Random prediction gets cached for future use until
             //               the integration with an existing ML model. The
@@ -48,12 +54,12 @@ public class DummyModel extends Model {
 /*
     @Override
     public double predict(String objective, HwResource device, String sourceCode) {
-        FeatureExtractor extractor = FeatureExtractor.getInstance();
-        List<Double> inputFeatures = extractor.extract(sourceCode);
+        final CSLabFeatureExtractor extractor = CSLabFeatureExtractor.getInstance();
+        final List<Double> inputFeatures = extractor.extract(sourceCode);
 
-        System.err.println("[Model] Features retrieved: " + inputFeatures);
+        logger.info("Features retrieved: " + inputFeatures);
 
-        Random r = new Random(System.currentTimeMillis());
+        final Random r = new Random(System.currentTimeMillis());
         return r.nextInt(10);
     }
 */

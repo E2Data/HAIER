@@ -55,7 +55,7 @@ public class HaierExecutionGraph {
         this.objectiveCosts = new HashMap<>();
 
         // Construct all ScheduledJobVertex objects.
-        // Create a temporary mapping of this.jobVertices for multiple fast 
+        // Create a temporary mapping of this.jobVertices for multiple fast
         // inverse lookups while searching for each JobVertex's children.
         final Map<JobVertex, Integer> mirroredJobVertices = new HashMap<>();
         for (int i = 0; i < this.jobVertices.length; i++) {
@@ -197,7 +197,7 @@ public class HaierExecutionGraph {
 
         final List<JSONableScheduledJobVertex> vs = new ArrayList<>(schedulableIndices.size());
         for (int i : schedulableIndices) {
-            JSONableScheduledJobVertex v = new JSONableScheduledJobVertex();
+            final JSONableScheduledJobVertex v = new JSONableScheduledJobVertex();
             v.setId(this.jobVertices[i].getID());
             v.setAssignedResource(this.scheduledJobVertices.get(i).getAssignedResource());
 
