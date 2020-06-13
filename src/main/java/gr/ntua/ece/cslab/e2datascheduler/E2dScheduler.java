@@ -7,6 +7,7 @@ import gr.ntua.ece.cslab.e2datascheduler.ml.ModelLibrary;
 import gr.ntua.ece.cslab.e2datascheduler.ml.impl.DemoModel;
 import gr.ntua.ece.cslab.e2datascheduler.ml.impl.DummyCSLabModel;
 import gr.ntua.ece.cslab.e2datascheduler.optimizer.Optimizer;
+import gr.ntua.ece.cslab.e2datascheduler.optimizer.Parameters;
 import gr.ntua.ece.cslab.e2datascheduler.optimizer.nsga.NSGAIIHaierOptimizer;
 
 import org.apache.flink.runtime.jobgraph.JobGraph;
@@ -54,6 +55,7 @@ public class E2dScheduler {
                 default: break;
             }
         }
+
         optimizer = new NSGAIIHaierOptimizer();
     }
 
@@ -77,4 +79,12 @@ public class E2dScheduler {
         //return new NSGAIIHaierOptimizer().optimize(jobGraph, policy, selectedModel);
     }
 
+    /**
+     * Configure HAIER's Optimizer with the given Parameters.
+     *
+     * @param parameters is an optimizer-dependent object containing configuration parameters.
+     */
+    public void configureOptimizer(final Parameters parameters) {
+        this.optimizer.configure(parameters); // synchronized access
+    }
 }

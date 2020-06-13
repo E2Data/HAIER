@@ -3,16 +3,18 @@ package gr.ntua.ece.cslab.e2datascheduler.ws;
 import gr.ntua.ece.cslab.e2datascheduler.E2dScheduler;
 import gr.ntua.ece.cslab.e2datascheduler.beans.optpolicy.OptimizationPolicy;
 import gr.ntua.ece.cslab.e2datascheduler.graph.HaierExecutionGraph;
+import gr.ntua.ece.cslab.e2datascheduler.optimizer.nsga.NSGAIIParameters;
 
 import org.apache.flink.runtime.jobgraph.JobGraph;
 
 import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
 import org.glassfish.jersey.media.multipart.FormDataParam;
 
+import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
+import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
-import javax.ws.rs.Consumes;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -53,6 +55,17 @@ public class SchedulerService extends AbstractE2DataService {
         String happyMesg = "hello";
 
         return generateResponse(Response.Status.OK, happyMesg);
+    }
+
+    @Path("/nsga2/params")
+    @PUT
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response setNSGAIIParameters(final NSGAIIParameters parameters) {
+        logger.info("Just received a PUT request on /e2data/nsga2/params !");
+        this.scheduler.configureOptimizer(parameters);
+
+        return generateResponse(Response.Status.OK, "");
     }
 
     @Path("/flink-schedule")

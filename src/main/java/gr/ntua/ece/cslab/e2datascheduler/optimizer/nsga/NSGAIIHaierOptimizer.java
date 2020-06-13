@@ -7,6 +7,7 @@ import gr.ntua.ece.cslab.e2datascheduler.beans.optpolicy.OptimizationPolicy;
 import gr.ntua.ece.cslab.e2datascheduler.graph.HaierExecutionGraph;
 import gr.ntua.ece.cslab.e2datascheduler.ml.Model;
 import gr.ntua.ece.cslab.e2datascheduler.optimizer.Optimizer;
+import gr.ntua.ece.cslab.e2datascheduler.optimizer.Parameters;
 
 import org.apache.flink.runtime.jobgraph.JobGraph;
 
@@ -14,8 +15,10 @@ import org.moeaframework.Executor;
 import org.moeaframework.core.NondominatedPopulation;
 import org.moeaframework.core.Solution;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.ResourceBundle;
 import java.util.logging.Logger;
-import java.util.*;
 
 
 /**
@@ -28,9 +31,11 @@ public class NSGAIIHaierOptimizer implements Optimizer {
 
     public static ResourceBundle resourceBundle = ResourceBundle.getBundle("config");
 
-    // TODO(ckatsak): These could possibly be defined by the user through the GUI?
-    private int maxParetoPlans = Integer.parseInt(resourceBundle.getString("optimizer.maxParetoPlans"));
-    private int numGenerations = Integer.parseInt(resourceBundle.getString("optimizer.maxGenerations"));
+    /**
+     * Configuration parameters for the NSGAII genetic algorithm. This attribute should *always* be accessed through
+     * its getter and setter methods to avoid race conditions.
+     */
+    private NSGAIIParameters parameters;
 
     /**
      * A list of the available {@link HwResource}s in the cluster, to assign the
@@ -46,22 +51,34 @@ public class NSGAIIHaierOptimizer implements Optimizer {
      */
     public NSGAIIHaierOptimizer() {
         this.devices = new ArrayList<>();
+        this.parameters = new NSGAIIParameters(
+                Integer.parseInt(resourceBundle.getString("optimizer.maxParetoPlans")),
+                Integer.parseInt(resourceBundle.getString("optimizer.maxGenerations"))
+        );
     }
 
-    public int getMaxParetoPlans() {
-        return this.maxParetoPlans;
+    /**
+     * Get the current values of the NSGA-II parameters in a synchronized way with respect to concurrent setters.
+     *
+     * @return the current values of the NSGA-II parameters.
+     */
+    public synchronized NSGAIIParameters getNSGAIIParameters() {
+        logger.info("Retrieving this.parameters.maxParetoPlans (= " + this.parameters.getMaxParetoPlans() + ") and " +
+                "this.parameters.numGenerations (= " + this.parameters.getNumGenerations() + ").");
+        return this.parameters;
     }
 
-    public void setMaxParetoPlans(final int maxParetoPlans) {
-        this.maxParetoPlans = maxParetoPlans;
-    }
-
-    public int getNumGenerations() {
-        return this.numGenerations;
-    }
-
-    public void setNumGenerations(final int numGenerations) {
-        this.numGenerations = numGenerations;
+    /**
+     * Set new values for the NSGA-II parameters in a synchronized way with respect to concurrent getters.
+     *
+     * @param parameters contains the new values of the NSGA-II parameters to be set; must be an object of the
+     *                   {@link NSGAIIParameters} class.
+     */
+    @Override
+    public synchronized void configure(final Parameters parameters) {
+        this.parameters = (NSGAIIParameters) parameters;
+        logger.info("Just set this.parameters.maxParetoPlans to " + this.parameters.getMaxParetoPlans() +
+                " and this.parameters.numGenerations to " + this.parameters.getNumGenerations() + ".");
     }
 
     public List<HwResource> getDevices() {
@@ -115,16 +132,17 @@ public class NSGAIIHaierOptimizer implements Optimizer {
         final NSGAIIHaierPlanning problem = new NSGAIIHaierPlanning(devices, mlModel, flinkJobGraph, policy);
 
         // Run NSGA-II.
+        final NSGAIIParameters problemParams = this.getNSGAIIParameters(); // synchronized access
         final NondominatedPopulation result = new Executor()
                 .withProblem(problem)
                 .withAlgorithm("NSGAII")
-                .withProperty("populationSize", maxParetoPlans)
-                .withMaxEvaluations(numGenerations)
+                .withProperty("populationSize", problemParams.getMaxParetoPlans())
+                .withMaxEvaluations(problemParams.getNumGenerations())
                 .run();
 
         // Delegate the final selection of the HaierExecutionGraph to return,
         // to the provided OptimizationPolicy object.
-        final List<HaierExecutionGraph> paretoHaierExecutionGraphs = new ArrayList<>(maxParetoPlans);
+        final List<HaierExecutionGraph> paretoHaierExecutionGraphs = new ArrayList<>(problemParams.getMaxParetoPlans());
         for (Solution solution : result) {
             paretoHaierExecutionGraphs.add(problem.solutionGraphs.get(solution));
         }
