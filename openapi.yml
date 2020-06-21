@@ -1,0 +1,126 @@
+# E2Data HAIER OpenAPI 3.0.3 Specification
+#
+# author:    ckatsak
+# timestamp: Sun Jun 21 16:53:09 EEST 2020
+
+openapi: 3.0.3
+info:
+  version: 1.0.0
+  title: E2DATA HAIER API
+  description: E2DATA's Heterogeneous-Aware, Intelligent Resource Scheduler's lean RESTful HTTP API.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+
+servers:
+  - url: /e2data
+
+paths:
+  /flink-schedule:
+    post:
+      description: Submit a Flink JobGraph to allocate cluster resources for.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Cluster resources have been successfully allocated for the JobGraph.
+          # TODO(ckatsak): describe responses
+  /nsga2/params:
+    get: # FIXME(ckatsak): UNIMPLEMENTED
+      description: Retrieve NSGA-II Optimizer's configuration.
+      responses:
+        '200':
+          description: The current configuration of the NSGA-II algorithm.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NSGA2Params'
+    put:
+      description: Configure NSGA-II Optimizer.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NSGA2Params'
+      responses:
+        '204': # FIXME(ckatsak): HAIER currently returns an empty 200 instead.
+          description: Successfully set NSGA-II algorithm parameters.
+        '500': # FIXME(ckatsak): check Response of JSON deserialization failure
+          description: Failure setting NSGA-II algorithm parameters.
+  /nsga2/{jobId}/selection:
+    parameters:
+      - name: jobId
+        in: path
+        required: true
+        description: The JobID of the Job in question.
+        schema:
+          type: string # FIXME(ckatsak): probably?
+    get: # FIXME(ckatsak): UNIMPLEMENTED
+      description: Retrieve the execution plans for the Job.
+      responses:
+        '200':
+          description: The execution plans that have been calculated for the Job.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ParetoPlan'
+          # TODO(ckatsak)
+        '304':
+          # FIXME(ckatsak): Nothing to return, so we're good?
+          description: The calculation of the execution plans for the Job is in progress.
+        '404':
+          description: No Job by this ID is currently being tracked by HAIER.
+    post: # FIXME(ckatsak): UNIMPLEMENTED
+      description: Select one of the available execution plans for the Job.
+      requestBody:
+        description: The execution plan that has been selected by the user.
+        required: true
+        content:
+          application/json:
+            schema:
+              #type: integer # NOTE(ckatsak): plan_id
+              ##format: int64
+              $ref: '#/components/schemas/ParetoPlan'
+      responses:
+        '200':
+          # TODO(ckatsak)
+          description: Successfully submitted the execution plan selected by the user.
+        '404':
+          description: No Job by this ID is currently being tracked by HAIER.
+        '500': # FIXME(ckatsak): ?
+          description: TODO
+
+components:
+  schemas:
+    NSGA2Params: # FIXME(ckatsak): check snake_case (json) vs camelCase (jackson)
+      type: object
+      properties:
+        max_pareto_plans:
+          type: integer
+          #format: int64
+        num_generations:
+          type: integer
+          #format: int64
+    ParetoPlan:
+      type: object
+      properties:
+        plan_id:
+          type: integer
+          #format: int64
+        execution_time:
+          type: number
+          format: double
+        power_consumption:
+          type: number
+          format: double
