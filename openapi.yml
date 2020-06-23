@@ -1,7 +1,7 @@
 # E2Data HAIER OpenAPI 3.0.3 Specification
 #
 # author:    ckatsak
-# timestamp: Tue Jun 23 04:05:35 EEST 2020
+# timestamp: Tue Jun 23 17:48:44 EEST 2020
 
 openapi: 3.0.3
 info:
@@ -16,7 +16,7 @@ servers:
   - url: /e2data
 
 paths:
-  /flink-schedule:
+  /flink-schedule: # NOTE(ckatsak): Flink
     post:
       description: Submit a Flink JobGraph to allocate cluster resources for.
       requestBody:
@@ -33,8 +33,8 @@ paths:
         '200':
           description: Cluster resources have been successfully allocated for the JobGraph.
           # TODO(ckatsak): describe responses
-  /nsga2/params:
-    get: # FIXME(ckatsak): UNIMPLEMENTED
+  /nsga2/params: # NOTE(ckatsak): GUI
+    get:
       description: Retrieve NSGA-II Optimizer's configuration.
       responses:
         '200':
@@ -43,6 +43,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/NSGA2Params'
+        '500':
+          description: Generic failure retrieving NSGA-II configuration.
     put:
       description: Configure NSGA-II Optimizer.
       requestBody:
@@ -58,7 +60,7 @@ paths:
           description: Poorly formatted input submitted.
         '500':
           description: Generic failure setting NSGA-II algorithm parameters.
-  /nsga2/{jobId}/selection:
+  /nsga2/{jobId}/selection: # NOTE(ckatsak): GUI
     parameters:
       - name: jobId # TODO(ckatsak): Figure out where the F does this come from
         in: path
@@ -114,12 +116,13 @@ components:
         max_pareto_plans:
           type: integer
           #format: int64
-          multipleOf: 500
+          #multipleOf: 100
           minimum: 0
           exclusiveMinimum: true
         num_generations:
           type: integer
           #format: int64
+          #multipleOf: 100
           minimum: 0
           exclusiveMinimum: true
     ParetoPlan:

@@ -68,6 +68,15 @@ public class SchedulerService extends AbstractE2DataService {
         return generateResponse(Response.Status.NO_CONTENT, "");
     }
 
+    @Path("/nsga2/params")
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getNSGAIIParameters() {
+        logger.info("Just received a GET request on /e2data/nsga2/params !");
+
+        return generateResponse(Response.Status.OK, this.scheduler.retrieveConfiguration());
+    }
+
     @Path("/flink-schedule")
     @POST
     @Consumes(MediaType.MULTIPART_FORM_DATA)

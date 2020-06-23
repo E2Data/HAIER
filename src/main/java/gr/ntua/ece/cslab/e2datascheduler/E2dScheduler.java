@@ -80,6 +80,15 @@ public class E2dScheduler {
     }
 
     /**
+     * Retrieve the values of Optimizer's current configuration parameters.
+     *
+     * @return the values of Optimizer's current configuration parameters.
+     */
+    public Parameters retrieveConfiguration() {
+        return this.optimizer.retrieveConfiguration();
+    }
+
+    /**
      * Configure HAIER's Optimizer with the given Parameters.
      *
      * @param parameters is an optimizer-dependent object containing configuration parameters.

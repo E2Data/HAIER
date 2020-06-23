@@ -32,7 +32,7 @@ public class NSGAIIHaierOptimizer implements Optimizer {
     public static ResourceBundle resourceBundle = ResourceBundle.getBundle("config");
 
     /**
-     * Configuration parameters for the NSGAII genetic algorithm. This attribute should *always* be accessed through
+     * Configuration parameters for the NSGA-II genetic algorithm. This attribute should *always* be accessed through
      * its getter and setter methods to avoid race conditions.
      */
     private NSGAIIParameters parameters;
@@ -46,7 +46,7 @@ public class NSGAIIHaierOptimizer implements Optimizer {
     // --------------------------------------------------------------------------------------------
 
     /**
-     * Implementation of an E2Data HAIER's optimizer that is based on the use of the NSGAII genetic algorithm and
+     * Implementation of an E2Data HAIER's optimizer that is based on the use of the NSGA-II genetic algorithm and
      * Machine Learning models for the evaluation of each of its generations.
      */
     public NSGAIIHaierOptimizer() {
@@ -58,11 +58,14 @@ public class NSGAIIHaierOptimizer implements Optimizer {
     }
 
     /**
-     * Get the current values of the NSGA-II parameters in a synchronized way with respect to concurrent setters.
+     * Retrieve the values of NSGAIIHaierOptimizer's current configuration parameters in a synchronized way with
+     * respect to concurrent setters.
      *
-     * @return the current values of the NSGA-II parameters.
+     * @return the values of NSGAIIHaierOptimizer's current configuration parameters; an object that can be safely
+     *         casted to {@link NSGAIIParameters}.
      */
-    public synchronized NSGAIIParameters getNSGAIIParameters() {
+    @Override
+    public synchronized Parameters retrieveConfiguration() {
         logger.info("Retrieving this.parameters.maxParetoPlans (= " + this.parameters.getMaxParetoPlans() + ") and " +
                 "this.parameters.numGenerations (= " + this.parameters.getNumGenerations() + ").");
         return this.parameters;
@@ -132,7 +135,7 @@ public class NSGAIIHaierOptimizer implements Optimizer {
         final NSGAIIHaierPlanning problem = new NSGAIIHaierPlanning(devices, mlModel, flinkJobGraph, policy);
 
         // Run NSGA-II.
-        final NSGAIIParameters problemParams = this.getNSGAIIParameters(); // synchronized access
+        final NSGAIIParameters problemParams = (NSGAIIParameters) this.retrieveConfiguration(); // synchronized access
         final NondominatedPopulation result = new Executor()
                 .withProblem(problem)
                 .withAlgorithm("NSGAII")

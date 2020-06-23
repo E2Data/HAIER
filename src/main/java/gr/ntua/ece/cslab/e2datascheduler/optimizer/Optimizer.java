@@ -26,4 +26,11 @@ public interface Optimizer {
      * @param parameters is an optimizer-dependent object containing configuration parameters.
      */
     void configure(Parameters parameters);
+
+    /**
+     * Retrieve the values of Optimizer's current configuration parameters.
+     *
+     * @return the values of Optimizer's current configuration parameters.
+     */
+    Parameters retrieveConfiguration();
 }
