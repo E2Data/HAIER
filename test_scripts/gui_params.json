@@ -1,4 +1,4 @@
 {
-	"maxParetoPlans": 18000,
-	"numGenerations": "18"
+	"max_pareto_plans": 18000,
+	"num_generations": "18"
 }

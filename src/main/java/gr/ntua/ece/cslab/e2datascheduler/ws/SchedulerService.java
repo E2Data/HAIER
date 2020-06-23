@@ -65,7 +65,7 @@ public class SchedulerService extends AbstractE2DataService {
         logger.info("Just received a PUT request on /e2data/nsga2/params !");
         this.scheduler.configureOptimizer(parameters);
 
-        return generateResponse(Response.Status.OK, "");
+        return generateResponse(Response.Status.NO_CONTENT, "");
     }
 
     @Path("/flink-schedule")

@@ -1,7 +1,7 @@
 # E2Data HAIER OpenAPI 3.0.3 Specification
 #
 # author:    ckatsak
-# timestamp: Sun Jun 21 16:53:09 EEST 2020
+# timestamp: Tue Jun 23 04:05:35 EEST 2020
 
 openapi: 3.0.3
 info:
@@ -52,13 +52,15 @@ paths:
             schema:
               $ref: '#/components/schemas/NSGA2Params'
       responses:
-        '204': # FIXME(ckatsak): HAIER currently returns an empty 200 instead.
+        '204':
           description: Successfully set NSGA-II algorithm parameters.
-        '500': # FIXME(ckatsak): check Response of JSON deserialization failure
-          description: Failure setting NSGA-II algorithm parameters.
+        '400':
+          description: Poorly formatted input submitted.
+        '500':
+          description: Generic failure setting NSGA-II algorithm parameters.
   /nsga2/{jobId}/selection:
     parameters:
-      - name: jobId
+      - name: jobId # TODO(ckatsak): Figure out where the F does this come from
         in: path
         required: true
         description: The JobID of the Job in question.
@@ -75,12 +77,15 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/ParetoPlan'
-          # TODO(ckatsak)
-        '304':
-          # FIXME(ckatsak): Nothing to return, so we're good?
+          # TODO(ckatsak): ?
+        '202':
           description: The calculation of the execution plans for the Job is in progress.
+          # TODO(ckatsak): Nothing to return, so we're good?
         '404':
-          description: No Job by this ID is currently being tracked by HAIER.
+          # TODO(ckatsak)
+          description: No Job is currently being tracked by HAIER by the given ID.
+        '500':
+          description: Generic failure retrieving the NSGA-II execution plans for the job.
     post: # FIXME(ckatsak): UNIMPLEMENTED
       description: Select one of the available execution plans for the Job.
       requestBody:
@@ -93,34 +98,44 @@ paths:
               ##format: int64
               $ref: '#/components/schemas/ParetoPlan'
       responses:
-        '200':
+        '204':
           # TODO(ckatsak)
           description: Successfully submitted the execution plan selected by the user.
         '404':
-          description: No Job by this ID is currently being tracked by HAIER.
+          description: No Job is currently being tracked by HAIER by the given ID.
         '500': # FIXME(ckatsak): ?
-          description: TODO
+          description: Generic failure selecting a NSGA-II execution plan for the job.
 
 components:
   schemas:
-    NSGA2Params: # FIXME(ckatsak): check snake_case (json) vs camelCase (jackson)
+    NSGA2Params:
       type: object
       properties:
         max_pareto_plans:
           type: integer
           #format: int64
+          multipleOf: 500
+          minimum: 0
+          exclusiveMinimum: true
         num_generations:
           type: integer
           #format: int64
+          minimum: 0
+          exclusiveMinimum: true
     ParetoPlan:
       type: object
       properties:
         plan_id:
           type: integer
           #format: int64
+          minimum: 0
         execution_time:
           type: number
           format: double
+          minimum: 0
+          exclusiveMinimum: true
         power_consumption:
           type: number
           format: double
+          minimum: 0
+          exclusiveMinimum: true
