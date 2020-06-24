@@ -19,55 +19,54 @@ import java.util.ResourceBundle;
  */
 public class E2dScheduler {
 
-    public static ResourceBundle resourceBundle = ResourceBundle.getBundle("config");
+    public static final ResourceBundle resourceBundle = ResourceBundle.getBundle("config");
     private static final String DEFAULT_MODEL = resourceBundle.getString("default.model");
 
 
     private static E2dScheduler scheduler;
 
-    private Optimizer optimizer;
-    private ModelLibrary models;
+    private final Optimizer optimizer;
+    private final ModelLibrary models;
 
-    private E2dScheduler(){
-        models = new ModelLibrary();
+    private E2dScheduler() {
+        this.models = new ModelLibrary();
 
-        String[] modelsWithPaths = resourceBundle.getString("supported.models").split(",");
-        for(String m : modelsWithPaths){
-            String[] mp = m.split("=");
-            String modelName = mp[0];
-            String modelPath = mp[1];
-            switch (modelName){
-                case "linearRegression": {
+        final String[] modelsWithPaths = resourceBundle.getString("supported.models").split(",");
+        for (String m : modelsWithPaths) {
+            final String[] mp = m.split("=");
+            final String modelName = mp[0];
+            final String modelPath = mp[1];
+            switch (modelName) {
+                case "linearRegression":
                     //FIXME: (gmytil) For now, I instantiate a dummy model. In the regular case, I will load one
                     // from disk with kbitsak's code
-                    Model dummyCsLabModel = new DummyCSLabModel();
+                    final Model dummyCsLabModel = new DummyCSLabModel();
                     dummyCsLabModel.load(modelPath);
-                    models.put(modelName, dummyCsLabModel);
+                    this.models.put(modelName, dummyCsLabModel);
                     break;
-                }
-                case "demo": {
-                    Model demoModel = new DemoModel();
+                case "demo":
+                    final Model demoModel = new DemoModel();
                     demoModel.load(modelPath);
-                    models.put(modelName, demoModel);
+                    this.models.put(modelName, demoModel);
                     break;
-                }
                 //TODO: Add 'case' clauses for supported models
-                default: break;
+                default:
+                    break;
             }
         }
 
-        optimizer = new NSGAIIHaierOptimizer();
+        this.optimizer = new NSGAIIHaierOptimizer();
     }
 
-    public static E2dScheduler getInstance(){
-        if(scheduler == null){
+    public static E2dScheduler getInstance() {
+        if (scheduler == null) {
             scheduler = new E2dScheduler();
         }
         return scheduler;
     }
 
-    public HaierExecutionGraph schedule(JobGraph jobGraph, OptimizationPolicy policy) {
-        Model selectedModel;
+    public HaierExecutionGraph schedule(final JobGraph jobGraph, final OptimizationPolicy policy) {
+        final Model selectedModel;
         if (policy.getMlModel() == null || !this.models.containsKey(policy.getMlModel())) {
             selectedModel = this.models.get(DEFAULT_MODEL);
             //selectedModel = new DemoModel();
@@ -85,7 +84,7 @@ public class E2dScheduler {
      * @return the values of Optimizer's current configuration parameters.
      */
     public Parameters retrieveConfiguration() {
-        return this.optimizer.retrieveConfiguration();
+        return this.optimizer.retrieveConfiguration(); // synchronized access
     }
 
     /**
