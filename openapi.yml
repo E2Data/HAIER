@@ -1,7 +1,7 @@
 # E2Data HAIER OpenAPI 3.0.3 Specification
 #
 # author:    ckatsak
-# timestamp: Tue Jun 23 17:48:44 EEST 2020
+# timestamp: Mon Jun 29 12:11:47 EEST 2020
 
 openapi: 3.0.3
 info:
@@ -32,7 +32,9 @@ paths:
       responses:
         '200':
           description: Cluster resources have been successfully allocated for the JobGraph.
-          # TODO(ckatsak): describe responses
+        '500':
+          description: Generic failure processing the input JobGraph.
+        # TODO(ckatsak): describe responses
   /nsga2/params: # NOTE(ckatsak): GUI
     get:
       description: Retrieve NSGA-II Optimizer's configuration.
@@ -57,18 +59,22 @@ paths:
         '204':
           description: Successfully set NSGA-II algorithm parameters.
         '400':
-          description: Poorly formatted input submitted.
+          description: Malformed input NSGA-II parameters.
+          content:
+            text/plain:
+              schema:
+                type: string
         '500':
           description: Generic failure setting NSGA-II algorithm parameters.
-  /nsga2/{jobId}/selection: # NOTE(ckatsak): GUI
+  /nsga2/{jobId}/plans: # NOTE(ckatsak): GUI
     parameters:
-      - name: jobId # TODO(ckatsak): Figure out where the F does this come from
+      - name: jobId
         in: path
         required: true
         description: The JobID of the Job in question.
         schema:
-          type: string # FIXME(ckatsak): probably?
-    get: # FIXME(ckatsak): UNIMPLEMENTED
+          type: string
+    get:
       description: Retrieve the execution plans for the Job.
       responses:
         '200':
@@ -84,11 +90,10 @@ paths:
           description: The calculation of the execution plans for the Job is in progress.
           # TODO(ckatsak): Nothing to return, so we're good?
         '404':
-          # TODO(ckatsak)
           description: No Job is currently being tracked by HAIER by the given ID.
         '500':
           description: Generic failure retrieving the NSGA-II execution plans for the job.
-    post: # FIXME(ckatsak): UNIMPLEMENTED
+    post:
       description: Select one of the available execution plans for the Job.
       requestBody:
         description: The execution plan that has been selected by the user.
@@ -96,17 +101,47 @@ paths:
         content:
           application/json:
             schema:
-              #type: integer # NOTE(ckatsak): plan_id
+              #type: integer # NOTE(ckatsak): Alternatively just the plan_id
               ##format: int64
               $ref: '#/components/schemas/ParetoPlan'
       responses:
         '204':
-          # TODO(ckatsak)
+          # TODO(ckatsak): ?
           description: Successfully submitted the execution plan selected by the user.
+        '400':
+          description: Malformed input execution plan.
+          content:
+            text/plain:
+              schema:
+                type: string
+        '500':
+          description: Generic failure selecting a NSGA-II execution plan for the job.
+  /nsga2/{jobId}/logs: # FIXME(ckatsak): probably screw per-job logs
+    get: # FIXME(ckatsak): UNIMPLEMENTED
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          description: The JobID of the Job in question.
+          schema:
+            type: string
+      description: Retrieve execution logs related to the Job.
+      responses:
+        '200':
+          description: A list of logs related to the Job that have been gathered so far.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                  format: byte # TODO(ckatsak): They have to be base64-encoded
+        '204':
+          description: No new logs related to the Job since the last request.
         '404':
           description: No Job is currently being tracked by HAIER by the given ID.
-        '500': # FIXME(ckatsak): ?
-          description: Generic failure selecting a NSGA-II execution plan for the job.
+        '500':
+          description: Generic failure serving logs related to the Job.
 
 components:
   schemas:
@@ -132,12 +167,12 @@ components:
           type: integer
           #format: int64
           minimum: 0
-        execution_time:
+        exec_time:
           type: number
           format: double
           minimum: 0
           exclusiveMinimum: true
-        power_consumption:
+        power_cons:
           type: number
           format: double
           minimum: 0

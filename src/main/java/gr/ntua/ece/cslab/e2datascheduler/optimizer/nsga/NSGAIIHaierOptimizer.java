@@ -29,7 +29,7 @@ public class NSGAIIHaierOptimizer implements Optimizer {
 
     private static final Logger logger = Logger.getLogger(NSGAIIHaierOptimizer.class.getCanonicalName());
 
-    public static ResourceBundle resourceBundle = ResourceBundle.getBundle("config");
+    public static final ResourceBundle resourceBundle = ResourceBundle.getBundle("config");
 
     /**
      * Configuration parameters for the NSGA-II genetic algorithm. This attribute should *always* be accessed through
@@ -94,7 +94,14 @@ public class NSGAIIHaierOptimizer implements Optimizer {
 
     // --------------------------------------------------------------------------------------------
 
-    public HaierExecutionGraph optimize(
+
+    // FIXME(ckatsak): When GUI is in, the NSGAIIParameters are read by E2dScheduler to allocate a BlockingQueue.
+    //                 Therefore, a (currently unhandled) race condition would occur if the NSGAIIParameters were
+    //                 changed between the allocation of the BlockingQueue in E2dScheduler.schedule() and the
+    //                 configuration of the NSGA-II Executor in here.
+    //                 Alternatively, we could use `synchronized` here; however this would effectively serialize
+    //                 the process of all scheduling requests that HAIER handles.
+    public List<HaierExecutionGraph> optimize(
             final JobGraph flinkJobGraph,
             final OptimizationPolicy policy,
             final Model mlModel) {
@@ -134,8 +141,10 @@ public class NSGAIIHaierOptimizer implements Optimizer {
         // Construct the problem.
         final NSGAIIHaierPlanning problem = new NSGAIIHaierPlanning(devices, mlModel, flinkJobGraph, policy);
 
-        // Run NSGA-II.
+        // Lock on specific problem parameters.
         final NSGAIIParameters problemParams = (NSGAIIParameters) this.retrieveConfiguration(); // synchronized access
+
+        // Run NSGA-II.
         final NondominatedPopulation result = new Executor()
                 .withProblem(problem)
                 .withAlgorithm("NSGAII")
@@ -149,7 +158,9 @@ public class NSGAIIHaierOptimizer implements Optimizer {
         for (Solution solution : result) {
             paretoHaierExecutionGraphs.add(problem.solutionGraphs.get(solution));
         }
-        return policy.pickHaierExecutionGraph(paretoHaierExecutionGraphs);
+        logger.fine("Pareto frontier (" + paretoHaierExecutionGraphs.size() + " solutions): " +
+                paretoHaierExecutionGraphs);
+        return paretoHaierExecutionGraphs;
     }
 
 }

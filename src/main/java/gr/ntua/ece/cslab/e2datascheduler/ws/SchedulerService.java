@@ -1,6 +1,8 @@
 package gr.ntua.ece.cslab.e2datascheduler.ws;
 
 import gr.ntua.ece.cslab.e2datascheduler.E2dScheduler;
+import gr.ntua.ece.cslab.e2datascheduler.SelectionQueue;
+import gr.ntua.ece.cslab.e2datascheduler.beans.gui.CandidatePlan;
 import gr.ntua.ece.cslab.e2datascheduler.beans.optpolicy.OptimizationPolicy;
 import gr.ntua.ece.cslab.e2datascheduler.graph.HaierExecutionGraph;
 import gr.ntua.ece.cslab.e2datascheduler.optimizer.nsga.NSGAIIParameters;
@@ -15,10 +17,12 @@ import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import java.util.List;
 import java.util.logging.Logger;
 import java.util.ResourceBundle;
 
@@ -39,10 +43,14 @@ public class SchedulerService extends AbstractE2DataService {
 
     private static final Logger logger = Logger.getLogger(SchedulerService.class.getCanonicalName());
 
-    public static ResourceBundle resourceBundle = ResourceBundle.getBundle("config");
+    public static final ResourceBundle resourceBundle = ResourceBundle.getBundle("config");
     private static final String tmpRootPath = resourceBundle.getString("haier.tmp.path");
 
-    private E2dScheduler scheduler;
+    private final E2dScheduler scheduler;
+
+
+    // --------------------------------------------------------------------------------------------
+
 
     public SchedulerService(){
         scheduler = E2dScheduler.getInstance();
@@ -51,22 +59,15 @@ public class SchedulerService extends AbstractE2DataService {
     // just for testing setup
     @Path("/hello")
     @GET
-    public Response schedule() {
+    public Response hello() {
         String happyMesg = "hello";
 
         return generateResponse(Response.Status.OK, happyMesg);
     }
 
-    @Path("/nsga2/params")
-    @PUT
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response setNSGAIIParameters(final NSGAIIParameters parameters) {
-        logger.info("Just received a PUT request on /e2data/nsga2/params !");
-        this.scheduler.configureOptimizer(parameters);
 
-        return generateResponse(Response.Status.NO_CONTENT, "");
-    }
+    // --------------------------------------------------------------------------------------------
+
 
     @Path("/nsga2/params")
     @GET
@@ -76,6 +77,88 @@ public class SchedulerService extends AbstractE2DataService {
 
         return generateResponse(Response.Status.OK, this.scheduler.retrieveConfiguration());
     }
+
+    @Path("/nsga2/params")
+    @PUT
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response setNSGAIIParameters(final NSGAIIParameters parameters) {
+        logger.info("Just received a PUT request on /e2data/nsga2/params !");
+
+        if (null == parameters) {
+            logger.warning("NSGAIIParameters received by GUI is null");
+            return generateResponse(Response.Status.BAD_REQUEST, "");
+        }
+
+        this.scheduler.configureOptimizer(parameters);
+        return generateResponse(Response.Status.NO_CONTENT, "");
+    }
+
+
+    // --------------------------------------------------------------------------------------------
+
+
+    @Path("/nsga2/{jobId}/plans")
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getPlans(@PathParam("jobId") final String jobId) {
+        logger.info("Just received a GET request on /e2data/nsga2/" + jobId + "/plans !");
+
+        // Retrieve Job's SelectionQueue. If it doesn't exist (just yet, possibly) return 404 NOT FOUND.
+        final SelectionQueue<CandidatePlan> plansQueue = this.scheduler.getSelectionQueue(jobId);
+        if (null == plansQueue) {
+            return generateResponse(Response.Status.NOT_FOUND, "");
+        }
+
+        // If the SelectionQueue already exists (i.e., the Job in question is already being tracked by HAIER),
+        // make an attempt to retrieve all execution plans calculated by the NSGAIIOptimizer.
+        List<CandidatePlan> candidatePlans = null;
+        try {
+            candidatePlans = plansQueue.retrieveOptions(500);
+        } catch (InterruptedException e) {
+            logger.severe(e.getMessage());
+            e.printStackTrace();
+            return generateResponse(Response.Status.INTERNAL_SERVER_ERROR, "InterruptedException");
+        }
+
+        // If no execution plans are available after 500ms return 202 ACCEPTED to prompt the GUI to retry later.
+        if (null == candidatePlans) {
+            logger.info("Candidate execution plans for Job " + jobId + " appear not to be ready to be sent yet.");
+            return generateResponse(Response.Status.ACCEPTED, "");
+        }
+        logger.info("The list of candidate execution plans is being sent to.");
+        return generateResponse(Response.Status.OK, candidatePlans);
+    }
+
+    @Path("/nsga2/{jobId}/plans")
+    @POST
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response setPlan(@PathParam("jobId") final String jobId, final CandidatePlan candidatePlan) {
+        logger.info("Just received a POST request on /e2data/nsga2/" + jobId + "/plans !");
+
+        // Make sure the input CandidatePlan is OK.
+        if (null == candidatePlan) {
+            logger.warning("CandidatePlan sent is null.");
+            return generateResponse(Response.Status.BAD_REQUEST, "");
+        }
+        logger.info("CandidatePlan selected by the GUI: " + candidatePlan);
+
+        // Retrieve Job's SelectionQueue. It should definitely exist by now (since a GET must have been preceded),
+        // hence the error in case of failure.
+        final SelectionQueue<CandidatePlan> plansQueue = this.scheduler.getSelectionQueue(jobId);
+        if (null == plansQueue) {
+            logger.severe("SelectionQueue for job " + jobId + " could not be found.");
+            return generateResponse(Response.Status.INTERNAL_SERVER_ERROR, "");
+        }
+
+        plansQueue.submitChoice(candidatePlan);
+        return generateResponse(Response.Status.NO_CONTENT, "");
+    }
+
+
+    // --------------------------------------------------------------------------------------------
+
 
     @Path("/flink-schedule")
     @POST
@@ -131,6 +214,9 @@ public class SchedulerService extends AbstractE2DataService {
                         "}";
 
         final HaierExecutionGraph result = this.scheduler.schedule(jobGraph, OptimizationPolicy.parseJSON(policyStr));
+        if (result == null) {
+            logger.warning("scheduler.schedule() returned null!");
+        }
 
         logger.info("Scheduling result for '" + jobGraph.toString() + "':\n\n" + result.toString() + "\n\nEnd of scheduling result.\n");
 
