@@ -3,6 +3,7 @@ package gr.ntua.ece.cslab.e2datascheduler.beans.gui;
 import gr.ntua.ece.cslab.e2datascheduler.graph.HaierExecutionGraph;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.gson.GsonBuilder;
 
 import java.util.Map;
 
@@ -48,5 +49,10 @@ public class CandidatePlan {
 
     public void setPowerCons(final double powerCons) {
         this.powerCons = powerCons;
+    }
+
+    @Override
+    public String toString() {
+        return new GsonBuilder().setPrettyPrinting().create().toJson(this);
     }
 }

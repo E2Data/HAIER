@@ -1,4 +1,4 @@
-package gr.ntua.ece.cslab.e2datascheduler;
+package gr.ntua.ece.cslab.e2datascheduler.util;
 
 import java.util.ArrayList;
 import java.util.List;

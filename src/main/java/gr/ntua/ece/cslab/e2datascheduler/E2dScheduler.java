@@ -10,6 +10,8 @@ import gr.ntua.ece.cslab.e2datascheduler.ml.impl.DummyCSLabModel;
 import gr.ntua.ece.cslab.e2datascheduler.optimizer.Optimizer;
 import gr.ntua.ece.cslab.e2datascheduler.optimizer.Parameters;
 import gr.ntua.ece.cslab.e2datascheduler.optimizer.nsga.NSGAIIHaierOptimizer;
+import gr.ntua.ece.cslab.e2datascheduler.util.HaierLogHandler;
+import gr.ntua.ece.cslab.e2datascheduler.util.SelectionQueue;
 
 import org.apache.flink.runtime.jobgraph.JobGraph;
 
@@ -18,6 +20,7 @@ import java.util.List;
 import java.util.ResourceBundle;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -53,6 +56,9 @@ public class E2dScheduler {
 
 
     private E2dScheduler() {
+        Logger.getLogger("").setLevel(Level.FINEST);
+        Logger.getLogger("").addHandler(HaierLogHandler.getHandler());
+
         this.models = new ModelLibrary();
 
         final String[] modelsWithPaths = resourceBundle.getString("supported.models").split(",");

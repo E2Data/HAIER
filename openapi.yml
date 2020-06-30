@@ -1,11 +1,11 @@
 # E2Data HAIER OpenAPI 3.0.3 Specification
 #
 # author:    ckatsak
-# timestamp: Mon Jun 29 12:11:47 EEST 2020
+# timestamp: Tue Jun 30 18:58:49 EEST 2020
 
 openapi: 3.0.3
 info:
-  version: 1.0.0
+  version: 1.0-SNAPSHOT
   title: E2DATA HAIER API
   description: E2DATA's Heterogeneous-Aware, Intelligent Resource Scheduler's lean RESTful HTTP API.
   license:
@@ -116,19 +116,12 @@ paths:
                 type: string
         '500':
           description: Generic failure selecting a NSGA-II execution plan for the job.
-  /nsga2/{jobId}/logs: # FIXME(ckatsak): probably screw per-job logs
-    get: # FIXME(ckatsak): UNIMPLEMENTED
-      parameters:
-        - name: jobId
-          in: path
-          required: true
-          description: The JobID of the Job in question.
-          schema:
-            type: string
-      description: Retrieve execution logs related to the Job.
+  /logs:
+    get:
+      description: Retrieve a batch of HAIER's newest undelivered logs.
       responses:
         '200':
-          description: A list of logs related to the Job that have been gathered so far.
+          description: A list of base64-encoded log messages that have been gathered so far.
           content:
             application/json:
               schema:
@@ -136,12 +129,6 @@ paths:
                 items:
                   type: string
                   format: byte # TODO(ckatsak): They have to be base64-encoded
-        '204':
-          description: No new logs related to the Job since the last request.
-        '404':
-          description: No Job is currently being tracked by HAIER by the given ID.
-        '500':
-          description: Generic failure serving logs related to the Job.
 
 components:
   schemas:

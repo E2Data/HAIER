@@ -1,11 +1,12 @@
 package gr.ntua.ece.cslab.e2datascheduler.ws;
 
 import gr.ntua.ece.cslab.e2datascheduler.E2dScheduler;
-import gr.ntua.ece.cslab.e2datascheduler.SelectionQueue;
 import gr.ntua.ece.cslab.e2datascheduler.beans.gui.CandidatePlan;
 import gr.ntua.ece.cslab.e2datascheduler.beans.optpolicy.OptimizationPolicy;
 import gr.ntua.ece.cslab.e2datascheduler.graph.HaierExecutionGraph;
 import gr.ntua.ece.cslab.e2datascheduler.optimizer.nsga.NSGAIIParameters;
+import gr.ntua.ece.cslab.e2datascheduler.util.HaierLogHandler;
+import gr.ntua.ece.cslab.e2datascheduler.util.SelectionQueue;
 
 import org.apache.flink.runtime.jobgraph.JobGraph;
 
@@ -22,7 +23,10 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import java.util.Base64;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.BlockingQueue;
 import java.util.logging.Logger;
 import java.util.ResourceBundle;
 
@@ -37,7 +41,6 @@ import java.io.InputStream;
  * REST API of {@link E2dScheduler}
  * Can be used for submitting and scheduling applications
  */
-
 @Path("/e2data")
 public class SchedulerService extends AbstractE2DataService {
 
@@ -52,7 +55,7 @@ public class SchedulerService extends AbstractE2DataService {
     // --------------------------------------------------------------------------------------------
 
 
-    public SchedulerService(){
+    public SchedulerService() {
         scheduler = E2dScheduler.getInstance();
     }
 
@@ -73,7 +76,7 @@ public class SchedulerService extends AbstractE2DataService {
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     public Response getNSGAIIParameters() {
-        logger.info("Just received a GET request on /e2data/nsga2/params !");
+        logger.finest("Just received a GET request on /e2data/nsga2/params !");
 
         return generateResponse(Response.Status.OK, this.scheduler.retrieveConfiguration());
     }
@@ -83,10 +86,10 @@ public class SchedulerService extends AbstractE2DataService {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public Response setNSGAIIParameters(final NSGAIIParameters parameters) {
-        logger.info("Just received a PUT request on /e2data/nsga2/params !");
+        logger.finest("Just received a PUT request on /e2data/nsga2/params !");
 
         if (null == parameters) {
-            logger.warning("NSGAIIParameters received by GUI is null");
+            logger.info("NSGAIIParameters received by GUI is null");
             return generateResponse(Response.Status.BAD_REQUEST, "");
         }
 
@@ -102,7 +105,7 @@ public class SchedulerService extends AbstractE2DataService {
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     public Response getPlans(@PathParam("jobId") final String jobId) {
-        logger.info("Just received a GET request on /e2data/nsga2/" + jobId + "/plans !");
+        logger.finest("Just received a GET request on /e2data/nsga2/" + jobId + "/plans !");
 
         // Retrieve Job's SelectionQueue. If it doesn't exist (just yet, possibly) return 404 NOT FOUND.
         final SelectionQueue<CandidatePlan> plansQueue = this.scheduler.getSelectionQueue(jobId);
@@ -135,14 +138,14 @@ public class SchedulerService extends AbstractE2DataService {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public Response setPlan(@PathParam("jobId") final String jobId, final CandidatePlan candidatePlan) {
-        logger.info("Just received a POST request on /e2data/nsga2/" + jobId + "/plans !");
+        logger.finest("Just received a POST request on /e2data/nsga2/" + jobId + "/plans !");
 
         // Make sure the input CandidatePlan is OK.
         if (null == candidatePlan) {
             logger.warning("CandidatePlan sent is null.");
             return generateResponse(Response.Status.BAD_REQUEST, "");
         }
-        logger.info("CandidatePlan selected by the GUI: " + candidatePlan);
+        logger.finer("CandidatePlan selected by the GUI: " + candidatePlan);
 
         // Retrieve Job's SelectionQueue. It should definitely exist by now (since a GET must have been preceded),
         // hence the error in case of failure.
@@ -154,6 +157,26 @@ public class SchedulerService extends AbstractE2DataService {
 
         plansQueue.submitChoice(candidatePlan);
         return generateResponse(Response.Status.NO_CONTENT, "");
+    }
+
+
+    // --------------------------------------------------------------------------------------------
+
+
+    @Path("/logs")
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getLogs() {
+        logger.finest("Just received a GET request on /e2data/logs !");
+
+        final BlockingQueue<String> logsQueue = HaierLogHandler.getLogsQueue();
+        final List<String> readyLogs = new LinkedList<>();
+        while (null != logsQueue.peek()) {
+            final String logMsg = logsQueue.poll();
+            readyLogs.add(Base64.getEncoder().encodeToString(logMsg.getBytes()));
+        }
+
+        return generateResponse(Response.Status.OK, readyLogs);
     }
 
 
@@ -228,7 +251,7 @@ public class SchedulerService extends AbstractE2DataService {
             final String filePath)
             throws IOException {
         final FileOutputStream out = new FileOutputStream(new File(filePath));
-        final byte[] bytes = new byte[8192];  // XXX(ckatsak): looks dirty; is it optimal?
+        final byte[] bytes = new byte[8192];
         int read;
         while ((read = uploadedInputStream.read(bytes)) != -1) {
             //logger.info("Just read " + read + " bytes from the file being uploaded.");
