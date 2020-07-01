@@ -1,7 +1,7 @@
 # E2Data HAIER OpenAPI 3.0.3 Specification
 #
 # author:    ckatsak
-# timestamp: Tue Jun 30 18:58:49 EEST 2020
+# timestamp: Thu Jul  2 11:18:46 EEST 2020
 
 openapi: 3.0.3
 info:
@@ -34,7 +34,7 @@ paths:
           description: Cluster resources have been successfully allocated for the JobGraph.
         '500':
           description: Generic failure processing the input JobGraph.
-        # TODO(ckatsak): describe responses
+        # TODO(ckatsak): describe responses to Flink
   /nsga2/params: # NOTE(ckatsak): GUI
     get:
       description: Retrieve NSGA-II Optimizer's configuration.
@@ -85,10 +85,8 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/ParetoPlan'
-          # TODO(ckatsak): ?
         '202':
           description: The calculation of the execution plans for the Job is in progress.
-          # TODO(ckatsak): Nothing to return, so we're good?
         '404':
           description: No Job is currently being tracked by HAIER by the given ID.
         '500':
@@ -106,7 +104,6 @@ paths:
               $ref: '#/components/schemas/ParetoPlan'
       responses:
         '204':
-          # TODO(ckatsak): ?
           description: Successfully submitted the execution plan selected by the user.
         '400':
           description: Malformed input execution plan.
@@ -116,7 +113,7 @@ paths:
                 type: string
         '500':
           description: Generic failure selecting a NSGA-II execution plan for the job.
-  /logs:
+  /logs: # NOTE(ckatsak): GUI
     get:
       description: Retrieve a batch of HAIER's newest undelivered logs.
       responses:
@@ -128,7 +125,7 @@ paths:
                 type: array
                 items:
                   type: string
-                  format: byte # TODO(ckatsak): They have to be base64-encoded
+                  format: byte
 
 components:
   schemas:
