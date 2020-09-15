@@ -20,6 +20,8 @@ import java.util.List;
 import java.util.ResourceBundle;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.logging.ConsoleHandler;
+import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -28,7 +30,7 @@ import java.util.logging.Logger;
  */
 public class E2dScheduler {
 
-    private static final Logger logger = Logger.getLogger(NSGAIIHaierOptimizer.class.getCanonicalName());
+    private static final Logger logger = Logger.getLogger(E2dScheduler.class.getCanonicalName());
 
     public static final ResourceBundle resourceBundle = ResourceBundle.getBundle("config");
     private static final String DEFAULT_MODEL = resourceBundle.getString("default.model");
@@ -57,7 +59,12 @@ public class E2dScheduler {
 
     private E2dScheduler() {
         Logger.getLogger("").setLevel(Level.FINEST);
-        Logger.getLogger("").addHandler(HaierLogHandler.getHandler());
+        Handler consoleHandler = new ConsoleHandler();
+        Handler haierHandler = HaierLogHandler.getHandler();
+        consoleHandler.setLevel(Level.FINEST);
+        haierHandler.setLevel(Level.FINEST);
+        Logger.getLogger("").addHandler(consoleHandler);
+        Logger.getLogger("").addHandler(haierHandler);
 
         this.models = new ModelLibrary();
 
