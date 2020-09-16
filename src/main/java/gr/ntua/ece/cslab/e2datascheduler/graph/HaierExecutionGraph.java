@@ -1,7 +1,6 @@
 package gr.ntua.ece.cslab.e2datascheduler.graph;
 
 import gr.ntua.ece.cslab.e2datascheduler.beans.cluster.HwResource;
-import gr.ntua.ece.cslab.e2datascheduler.beans.graph.JSONableHaierExecutionGraph;
 import gr.ntua.ece.cslab.e2datascheduler.beans.graph.JSONableScheduledJobVertex;
 
 import org.apache.flink.runtime.jobgraph.IntermediateDataSet;
@@ -180,10 +179,11 @@ public class HaierExecutionGraph {
     }
 
     /**
-     * @return a JSON-formatted {@link JSONableHaierExecutionGraph}.
+     * Serialize the {@link HaierExecutionGraph} into a {@link List<JSONableScheduledJobVertex>}.
+     *
+     * @return a {@link List} of {@link JSONableScheduledJobVertex}.
      */
-    @Override
-    public String toString() {
+    public List<JSONableScheduledJobVertex> toSerializableScheduledJobVertexList() {
         final List<Integer> schedulableIndices = new ArrayList<>();
         outer:
         for (int i = 0; i < this.jobVertices.length; i++) {
@@ -195,7 +195,7 @@ public class HaierExecutionGraph {
             schedulableIndices.add(i);
         }
 
-        final List<JSONableScheduledJobVertex> vs = new ArrayList<>(schedulableIndices.size());
+        final List<JSONableScheduledJobVertex> ret = new ArrayList<>(schedulableIndices.size());
         for (int i : schedulableIndices) {
             final JSONableScheduledJobVertex v = new JSONableScheduledJobVertex();
             v.setId(this.jobVertices[i].getID());
@@ -207,13 +207,18 @@ public class HaierExecutionGraph {
                 childrenIDs[j] = this.jobVertices[childrenIndices.get(j)].getID();
             }
             v.setChildren(childrenIDs);
-            vs.add(v);
+            ret.add(v);
         }
 
-        final JSONableHaierExecutionGraph jheg = new JSONableHaierExecutionGraph();
-        jheg.setJSONableScheduledJobVertices(vs.toArray(new JSONableScheduledJobVertex[schedulableIndices.size()]));
+        return ret;
+    }
 
-        return new GsonBuilder().setPrettyPrinting().create().toJson(jheg);
+    /**
+     * @return a pretty-printed JSON-formatted {@link List<JSONableScheduledJobVertex>}.
+     */
+    @Override
+    public String toString() {
+        return new GsonBuilder().setPrettyPrinting().create().toJson(this.toSerializableScheduledJobVertexList());
     }
 
 }

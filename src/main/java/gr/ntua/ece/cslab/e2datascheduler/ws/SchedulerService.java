@@ -1,6 +1,7 @@
 package gr.ntua.ece.cslab.e2datascheduler.ws;
 
 import gr.ntua.ece.cslab.e2datascheduler.E2dScheduler;
+import gr.ntua.ece.cslab.e2datascheduler.beans.graph.JSONableScheduledJobVertex;
 import gr.ntua.ece.cslab.e2datascheduler.beans.gui.CandidatePlan;
 import gr.ntua.ece.cslab.e2datascheduler.beans.optpolicy.OptimizationPolicy;
 import gr.ntua.ece.cslab.e2datascheduler.graph.HaierExecutionGraph;
@@ -22,6 +23,8 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+
+import com.google.gson.GsonBuilder;
 
 import java.util.Base64;
 import java.util.LinkedList;
@@ -129,7 +132,7 @@ public class SchedulerService extends AbstractE2DataService {
             logger.info("Candidate execution plans for Job " + jobId + " appear not to be ready to be sent yet.");
             return generateResponse(Response.Status.ACCEPTED, "");
         }
-        logger.info("The list of candidate execution plans is being sent to.");
+        logger.info("The list of candidate execution plans is being sent.");
         return generateResponse(Response.Status.OK, candidatePlans);
     }
 
@@ -190,16 +193,18 @@ public class SchedulerService extends AbstractE2DataService {
     public Response flink_schedule(
             @FormDataParam("file") InputStream uploadedInputStream,
             @FormDataParam("file") FormDataContentDisposition fileDetail) {
+        logger.finest("Just received a POST request on /e2data/flink-schedule !");
 
         final String filePath = tmpRootPath + fileDetail.getFileName();
-
         try {
             SchedulerService.persistSerializedJobGraphFile(uploadedInputStream, filePath);
-            logger.info("JobGraph file '" + fileDetail.getFileName() + "' has been uploaded successfully and stored in '" + filePath + "'.");
+            logger.info("JobGraph file '" + fileDetail.getFileName() +
+                    "' has been uploaded successfully and stored in '" + filePath + "'.");
         } catch (IOException e) {
             logger.warning("Error retrieving JobGraph file '" + fileDetail.getFileName() + "':" + e.getMessage());
             e.printStackTrace();
-            return generateResponse(Response.Status.INTERNAL_SERVER_ERROR, "Error retrieving JobGraph file '" + fileDetail.getFileName() + "'.");
+            return generateResponse(Response.Status.INTERNAL_SERVER_ERROR,
+                                    "Error retrieving JobGraph file '" + fileDetail.getFileName() + "'.");
         }
 
         JobGraph jobGraph;
@@ -209,7 +214,8 @@ public class SchedulerService extends AbstractE2DataService {
         } catch (Exception e) {
             logger.warning("Error deserializing JobGraph from file '" + filePath + "': " + e.getMessage());
             e.printStackTrace();
-            return generateResponse(Response.Status.INTERNAL_SERVER_ERROR, "Error deserializing JobGraph from file '" + fileDetail.getFileName() + "'.");
+            return generateResponse(Response.Status.INTERNAL_SERVER_ERROR,
+                                    "Error deserializing JobGraph from file '" + fileDetail.getFileName() + "'.");
         } finally {
             if (!new File(filePath).delete()) {
                 logger.warning("Error unlinking JobGraph file '" + filePath + "'.");
@@ -218,8 +224,8 @@ public class SchedulerService extends AbstractE2DataService {
 
         // FIXME(ckatsak): For now, a default OptimizationPolicy object is
         //                 hardcoded here instead of being sent by Flink.
-        //String policyStr = "{\"policy\": {\"objectives\": [ {\"name\":\"execTime\", \"targetFunction\":\"MIN\", \"combineFunction\":\"MAX\"}, {\"name\":\"powerCons\", \"targetFunction\":\"MIN\", \"combineFunction\":\"SUM\"} ]}}";
-        String policyStr = "{" +
+        //final String policyStr = "{\"policy\": {\"objectives\": [ {\"name\":\"execTime\", \"targetFunction\":\"MIN\", \"combineFunction\":\"MAX\"}, {\"name\":\"powerCons\", \"targetFunction\":\"MIN\", \"combineFunction\":\"SUM\"} ]}}";
+        final String policyStr = "{" +
                             "\"policy\": {" +
                                 "\"objectives\": [" +
                                     "{" +
@@ -237,13 +243,18 @@ public class SchedulerService extends AbstractE2DataService {
                         "}";
 
         final HaierExecutionGraph result = this.scheduler.schedule(jobGraph, OptimizationPolicy.parseJSON(policyStr));
-        if (result == null) {
-            logger.warning("scheduler.schedule() returned null!");
+        if (null == result) {
+            logger.finer("scheduler.schedule() returned null!");
+            logger.severe("Error allocating resources for '" + jobGraph.toString() + "'");
+            return generateResponse(Response.Status.INTERNAL_SERVER_ERROR, "");
         }
 
-        logger.info("Scheduling result for '" + jobGraph.toString() + "':\n\n" + result.toString() + "\n\nEnd of scheduling result.\n");
+        logger.info("Scheduling result for '" + jobGraph.toString() + "':\n" + result);
 
-        return generateResponse(Response.Status.OK, "JobGraph '" + jobGraph.toString() + "' has been scheduled successfully!");
+        final List<JSONableScheduledJobVertex> responseBody = result.toSerializableScheduledJobVertexList();
+        logger.info("Response body returned to Flink for '" + jobGraph.toString() + "':\n" +
+                new GsonBuilder().setPrettyPrinting().create().toJson(responseBody));
+        return generateResponse(Response.Status.OK, responseBody);
     }
 
     private static void persistSerializedJobGraphFile(
@@ -254,7 +265,7 @@ public class SchedulerService extends AbstractE2DataService {
         final byte[] bytes = new byte[8192];
         int read;
         while ((read = uploadedInputStream.read(bytes)) != -1) {
-            //logger.info("Just read " + read + " bytes from the file being uploaded.");
+            logger.finest("Read " + read + " bytes from the uploaded serialized JobGraph.");
             out.write(bytes, 0, read);
         }
         out.flush();
