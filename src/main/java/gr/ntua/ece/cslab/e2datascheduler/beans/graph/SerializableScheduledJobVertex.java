@@ -4,7 +4,7 @@ import gr.ntua.ece.cslab.e2datascheduler.beans.cluster.HwResource;
 
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 
-import com.google.gson.GsonBuilder;
+//import com.google.gson.GsonBuilder;
 
 public class SerializableScheduledJobVertex {
 
@@ -36,9 +36,9 @@ public class SerializableScheduledJobVertex {
         this.children = children;
     }
 
-    @Override
-    public String toString() {
-        return new GsonBuilder().create().toJson(this);
-    }
+//    @Override
+//    public String toString() {
+//        return new GsonBuilder().create().toJson(this);
+//    }
 
 }
