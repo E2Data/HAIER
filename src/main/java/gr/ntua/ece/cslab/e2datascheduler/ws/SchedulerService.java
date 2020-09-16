@@ -1,7 +1,7 @@
 package gr.ntua.ece.cslab.e2datascheduler.ws;
 
 import gr.ntua.ece.cslab.e2datascheduler.E2dScheduler;
-import gr.ntua.ece.cslab.e2datascheduler.beans.graph.JSONableScheduledJobVertex;
+import gr.ntua.ece.cslab.e2datascheduler.beans.graph.SerializableScheduledJobVertex;
 import gr.ntua.ece.cslab.e2datascheduler.beans.gui.CandidatePlan;
 import gr.ntua.ece.cslab.e2datascheduler.beans.optpolicy.OptimizationPolicy;
 import gr.ntua.ece.cslab.e2datascheduler.graph.HaierExecutionGraph;
@@ -251,7 +251,7 @@ public class SchedulerService extends AbstractE2DataService {
 
         logger.info("Scheduling result for '" + jobGraph.toString() + "':\n" + result);
 
-        final List<JSONableScheduledJobVertex> responseBody = result.toSerializableScheduledJobVertexList();
+        final List<SerializableScheduledJobVertex> responseBody = result.toSerializableScheduledJobVertexList();
         logger.info("Response body returned to Flink for '" + jobGraph.toString() + "':\n" +
                 new GsonBuilder().setPrettyPrinting().create().toJson(responseBody));
         return generateResponse(Response.Status.OK, responseBody);

@@ -1,7 +1,7 @@
 package gr.ntua.ece.cslab.e2datascheduler.graph;
 
 import gr.ntua.ece.cslab.e2datascheduler.beans.cluster.HwResource;
-import gr.ntua.ece.cslab.e2datascheduler.beans.graph.JSONableScheduledJobVertex;
+import gr.ntua.ece.cslab.e2datascheduler.beans.graph.SerializableScheduledJobVertex;
 
 import org.apache.flink.runtime.jobgraph.IntermediateDataSet;
 import org.apache.flink.runtime.jobgraph.JobEdge;
@@ -179,11 +179,11 @@ public class HaierExecutionGraph {
     }
 
     /**
-     * Serialize the {@link HaierExecutionGraph} into a {@link List<JSONableScheduledJobVertex>}.
+     * Serialize the {@link HaierExecutionGraph} into a {@link List< SerializableScheduledJobVertex >}.
      *
-     * @return a {@link List} of {@link JSONableScheduledJobVertex}.
+     * @return a {@link List} of {@link SerializableScheduledJobVertex}.
      */
-    public List<JSONableScheduledJobVertex> toSerializableScheduledJobVertexList() {
+    public List<SerializableScheduledJobVertex> toSerializableScheduledJobVertexList() {
         final List<Integer> schedulableIndices = new ArrayList<>();
         outer:
         for (int i = 0; i < this.jobVertices.length; i++) {
@@ -195,9 +195,9 @@ public class HaierExecutionGraph {
             schedulableIndices.add(i);
         }
 
-        final List<JSONableScheduledJobVertex> ret = new ArrayList<>(schedulableIndices.size());
+        final List<SerializableScheduledJobVertex> ret = new ArrayList<>(schedulableIndices.size());
         for (int i : schedulableIndices) {
-            final JSONableScheduledJobVertex v = new JSONableScheduledJobVertex();
+            final SerializableScheduledJobVertex v = new SerializableScheduledJobVertex();
             v.setId(this.jobVertices[i].getID());
             v.setAssignedResource(this.scheduledJobVertices.get(i).getAssignedResource());
 
@@ -214,7 +214,7 @@ public class HaierExecutionGraph {
     }
 
     /**
-     * @return a pretty-printed JSON-formatted {@link List<JSONableScheduledJobVertex>}.
+     * @return a pretty-printed JSON-formatted {@link List< SerializableScheduledJobVertex >}.
      */
     @Override
     public String toString() {

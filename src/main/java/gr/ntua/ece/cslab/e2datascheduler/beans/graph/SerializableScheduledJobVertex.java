@@ -6,7 +6,7 @@ import org.apache.flink.runtime.jobgraph.JobVertexID;
 
 import com.google.gson.GsonBuilder;
 
-public class JSONableScheduledJobVertex {
+public class SerializableScheduledJobVertex {
 
     private JobVertexID id;
     private HwResource assignedResource;
