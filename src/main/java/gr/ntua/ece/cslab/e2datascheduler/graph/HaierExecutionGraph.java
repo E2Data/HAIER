@@ -8,6 +8,7 @@ import org.apache.flink.runtime.jobgraph.JobEdge;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.JobVertex;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
+import org.apache.flink.runtime.jobmanager.scheduler.CoLocationGroup;
 
 import com.google.gson.GsonBuilder;
 
@@ -39,7 +40,9 @@ public class HaierExecutionGraph {
      */
     private final Map<String, Double> objectiveCosts;
 
+
     // --------------------------------------------------------------------------------------------
+
 
     /**
      * A mapping between an Apache Flink's {@link JobGraph}'s {@link JobVertex} objects and the {@link HwResource}s
@@ -96,7 +99,9 @@ public class HaierExecutionGraph {
         this.scheduledJobVertices.get(jobVertexIndex).setAssignedResource(assignedResource);
     }
 
+
     // --------------------------------------------------------------------------------------------
+
 
     /**
      * Find and return the root vertices for the JobGraph related to this HaierExecutionGraph.
@@ -142,7 +147,9 @@ public class HaierExecutionGraph {
         }
     }
 
+
     // --------------------------------------------------------------------------------------------
+
 
     private static final List<String> NON_COMPUTATIONAL_OPERATOR_NAMES = new ArrayList<String>() {{
         add("DataSource");
@@ -178,8 +185,54 @@ public class HaierExecutionGraph {
         return HaierExecutionGraph.isComputational(scheduledJobVertex.getJobVertex());
     }
 
+
+    // --------------------------------------------------------------------------------------------
+
+
     /**
-     * Serialize the {@link HaierExecutionGraph} into a {@link List< SerializableScheduledJobVertex >}.
+     * Check whether the co-location constraints of this {@link HaierExecutionGraph} are being respected.
+     *
+     * @return {@code true} if the co-location constraints are being respected; {@code false} otherwise
+     */
+    public boolean checkCoLocationConstraints() {
+        // Group all ScheduledJobVertices of the HaierExecutionGraph by their CoLocationGroup.
+        final Map<CoLocationGroup, List<ScheduledJobVertex>> verticesPerCoLocationGroup = new HashMap<>();
+        for (int jobVertexIndex = 0; jobVertexIndex < this.getJobVertices().length; jobVertexIndex++) {
+            final JobVertex jobVertex = this.getJobVertices()[jobVertexIndex];
+            final CoLocationGroup coLocationGroup = jobVertex.getCoLocationGroup();
+            // If there is no CoLocationGroup for this JobVertex, continue with the next one.
+            if (null == coLocationGroup) {
+                continue;
+            }
+            // If it's the first time we see this CoLocationGroup, initialize a new entry for it in the Map.
+            if (!verticesPerCoLocationGroup.containsKey(coLocationGroup)) {
+                verticesPerCoLocationGroup.put(coLocationGroup, new ArrayList<>());
+            }
+            // Add JobVertex's corresponding ScheduledJobVertex in this CoLocationGroup's List.
+            verticesPerCoLocationGroup.get(coLocationGroup)
+                    .add(this.getScheduledJobVertices().get(jobVertexIndex));
+        }
+
+        // For each of those groups, check whether their ScheduledJobVertices have been assigned on the same
+        // HwResource. If not, then the co-location constraints are not respected, therefore return false.
+        for (Map.Entry<CoLocationGroup, List<ScheduledJobVertex>> entry : verticesPerCoLocationGroup.entrySet()) {
+            final List<ScheduledJobVertex> coLocatedVertices = entry.getValue();
+            final HwResource assignedResource = coLocatedVertices.get(0).getAssignedResource();
+            for (ScheduledJobVertex scheduledJobVertex : coLocatedVertices) {
+                if (scheduledJobVertex.getAssignedResource() != assignedResource) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+
+    // --------------------------------------------------------------------------------------------
+
+
+    /**
+     * Serialize the {@link HaierExecutionGraph} into a {@link List<SerializableScheduledJobVertex>}.
      *
      * @return a {@link List} of {@link SerializableScheduledJobVertex}.
      */
@@ -214,7 +267,7 @@ public class HaierExecutionGraph {
     }
 
     /**
-     * @return a pretty-printed JSON-formatted {@link List< SerializableScheduledJobVertex >}.
+     * @return a pretty-printed JSON-formatted {@link List<SerializableScheduledJobVertex>}.
      */
     @Override
     public String toString() {

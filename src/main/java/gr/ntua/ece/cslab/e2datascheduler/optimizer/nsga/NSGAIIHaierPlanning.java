@@ -33,8 +33,8 @@ public class NSGAIIHaierPlanning extends AbstractProblem {
 
     private static final Logger logger = Logger.getLogger(NSGAIIHaierPlanning.class.getCanonicalName());
 
-    public static ResourceBundle resourceBundle = ResourceBundle.getBundle("config");
-    private static String timeEvalAlgorithm = resourceBundle.getString("optimizer.evalAlgorithm").toLowerCase();
+    public static final ResourceBundle resourceBundle = ResourceBundle.getBundle("config");
+    private static final String timeEvalAlgorithm = resourceBundle.getString("optimizer.evalAlgorithm").toLowerCase();
 
     /**
      * The Flink JobGraph that represents the tasks, and must be scheduled on
@@ -81,7 +81,19 @@ public class NSGAIIHaierPlanning extends AbstractProblem {
      */
     final TimeEvaluationAlgorithm timeEvaluator;
 
+    /**
+     * Execution plans that have been generated and aborted due to co-location constraints.
+     */
+    int abortedPlans;
+
+    /**
+     * The total number of generated execution plans.
+     */
+    int totalGeneratedPlans;
+
+
     // -------------------------------------------------------------------------------------------
+
 
     /**
      * A class that implements the core evaluation functionality for the NSGAII genetic algorithm
@@ -123,6 +135,9 @@ public class NSGAIIHaierPlanning extends AbstractProblem {
                 this.timeEvaluator = new ExhaustiveEvaluation(this.mlModel);
                 break;
         }
+
+        this.abortedPlans = 0;
+        this.totalGeneratedPlans = 0;
     }
 
     /**
@@ -144,7 +159,9 @@ public class NSGAIIHaierPlanning extends AbstractProblem {
         }
     }
 
+
     // -------------------------------------------------------------------------------------------
+
 
     /**
      * This method is automatically invoked by the MOEA framework at
@@ -175,16 +192,26 @@ public class NSGAIIHaierPlanning extends AbstractProblem {
         final Map<String, Double> objectiveCosts = haierExecutionGraph.getObjectiveCosts();
         this.solutionGraphs.put(solution, haierExecutionGraph);
 
+        ++this.totalGeneratedPlans;
+        final boolean coLocationsRespected = haierExecutionGraph.checkCoLocationConstraints();
+        if (!coLocationsRespected) {
+            ++this.abortedPlans;
+        }
+
         // TODO(ckatsak): For now, objectives are identified via String objects.
         //                This should probably change. Maybe Enums + Visitor ?
         for (String objective : this.objectives.keySet()) {
             double costEstimation = Double.NEGATIVE_INFINITY;
             switch (objective) {
                 case "execTime":
-                    costEstimation = this.timeEvaluator.calculateExecutionTime(haierExecutionGraph);
+                    costEstimation = coLocationsRespected
+                            ? this.timeEvaluator.calculateExecutionTime(haierExecutionGraph)
+                            : Double.POSITIVE_INFINITY;
                     break;
                 case "powerCons":
-                    costEstimation = this.calculatePowerConsumption(haierExecutionGraph);
+                    costEstimation = coLocationsRespected
+                            ? this.calculatePowerConsumption(haierExecutionGraph)
+                            : Double.POSITIVE_INFINITY;
                     break;
                 default:
                     // FIXME(ckatsak): This should be unreachable; yet, it depends on the input
@@ -202,8 +229,6 @@ public class NSGAIIHaierPlanning extends AbstractProblem {
 
     /**
      * Construct the {@link HaierExecutionGraph} imposed by the the given solution's assignment plan.
-     *
-     * FIXME(gmytil): What happens if a resource assigned by the plan is already in use?
      *
      * @param plan The plan ({@link JobVertex} to {@link HwResource}) to be evaluated, produced by the MOEA Framework
      *             using the NSGAII genetic algorithm.

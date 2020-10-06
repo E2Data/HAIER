@@ -125,10 +125,16 @@ public final class NSGAIIHaierOptimizer implements Optimizer {
                 .run();
 
         // Return the list of the available HaierExecutionGraphs (i.e., execution plans).
+        String str = "Enumerating all (" + result.size() + ") final solution(s):\n";
         final List<HaierExecutionGraph> paretoHaierExecutionGraphs = new ArrayList<>(problemParams.getMaxParetoPlans());
         for (Solution solution : result) {
             paretoHaierExecutionGraphs.add(problem.solutionGraphs.get(solution));
+            // TODO(ckatsak): Logging for exactly *2* objectives, hardcoded for now:
+            str += "- Solution (" + solution.getObjective(0) + ", " + solution.getObjective(1) + ")\n";
         }
+        str += problem.abortedPlans + " out of " + problem.totalGeneratedPlans +
+                " generated execution plans were aborted due to misalignment with co-location constraints.";
+        logger.finest(str);
         logger.finer("Pareto frontier (" + paretoHaierExecutionGraphs.size() + " solutions): " +
                 paretoHaierExecutionGraphs);
         return paretoHaierExecutionGraphs;
@@ -143,6 +149,7 @@ public final class NSGAIIHaierOptimizer implements Optimizer {
         final YarnCluster cluster = YarnCluster.getInstance();
         if (null == cluster) {
             logger.severe("Could not retrieve a fresh view of the cluster from Yarn!");
+            // FIXME(ckatsak): Throw an exception here, to be caught by the HTTP handler.
             return;
         }
         logger.info("Successfully retrieved a fresh view of the cluster from Yarn.");
@@ -156,6 +163,8 @@ public final class NSGAIIHaierOptimizer implements Optimizer {
                 // If multiple GPUs or FPGAs of the same model are present, they should be represented as distinct
                 // hardware resource objects; so we allocate distinct HwResource instances for each of them.
                 if (r.getName().startsWith("yarn.io/gpu") || r.getName().startsWith("yarn.io/fpga")) {
+                    // FIXME(ckatsak): This distinction of concrete resources of the same type performed by HAIER
+                    //                 should not be necessary when YARN's integration with OpenCL has been completed.
                     for (int i = 0; i < r.getValue(); i++) {
                         logger.finer("\t\tCreating distinct hardware resource no" + (i + 1));
                         devices.add(new HwResource(r, i));
