@@ -107,7 +107,70 @@ public class E2dScheduler {
     // --------------------------------------------------------------------------------------------
 
 
-    public HaierExecutionGraph schedule(final JobGraph jobGraph, final OptimizationPolicy policy) {
+    /**
+     * A scheduling result produced by HAIER. If it is not "empty" (i.e., none of the JobVertex objects could be
+     * offloaded to one of the heterogeneous architectures supported by E2Data), it contains the optimized
+     * {@link HaierExecutionGraph} that has been selected among the execution plans that were generated.
+     */
+    public static class SchedulingResult {
+        private final boolean empty;
+        private final HaierExecutionGraph result;
+
+        /**
+         * Create an "empty" scheduling result, i.e., one in which none of the
+         * {@link org.apache.flink.runtime.jobgraph.JobVertex} objects for a given {@link JobGraph} could be
+         * offloaded to an accelerator at all.
+         */
+        public SchedulingResult() {
+            this.empty = true;
+            this.result = null;
+        }
+
+        /**
+         * Create a "non-empty" scheduling result that contains a {@link HaierExecutionGraph}. An "empty" scheduling
+         * result signifies that no {@link org.apache.flink.runtime.jobgraph.JobVertex} objects for a given
+         * {@link JobGraph} could be offloaded to an accelerator at all.
+         *
+         * @param haierExecutionGraph the scheduling result, or {@code null} to signify an "empty" result.
+         */
+        public SchedulingResult(final HaierExecutionGraph haierExecutionGraph) {
+            this.empty = false;
+            this.result = haierExecutionGraph;
+        }
+
+        /**
+         * @return {@code true} if the scheduling result is "empty"; {@code false} otherwise
+         */
+        public boolean isEmpty() {
+            return this.empty;
+        }
+
+        /**
+         * @return the result {@link HaierExecutionGraph} or {@code null} if the result is "empty"
+         *
+         * FIXME(ckatsak): Is it possible to return null for a "non-empty" result (e.g., in the case of an
+         *                 internal error)? Until this is thoroughly reviewed, always use isEmpty() before this.
+         */
+        public HaierExecutionGraph getResult() {
+            return this.result;
+        }
+    }
+
+    /**
+     * TODO(ckatsak): Documentation
+     *
+     * @param jobGraph
+     * @param policy
+     * @return
+     */
+    public SchedulingResult schedule(final JobGraph jobGraph, final OptimizationPolicy policy) {
+        // If the given JobGraph does not contain any JobVertex that can be offloaded to an accelerator at all,
+        // return fast.
+        if (!HaierExecutionGraph.containsAnyComputationalJobVertex(jobGraph)) {
+            logger.info("Early exiting because none of the JobVertex objects can be offloaded to accelerators.");
+            return new SchedulingResult();
+        }
+
         // If GUI is enabled, register the JobID to the SelectionQueue,
         // to respond to GET /e2data/nsga2/{jobId}/plans appropriately.
         if (GUI_ENABLED) {
@@ -128,7 +191,7 @@ public class E2dScheduler {
         //return this.optimizer.optimize(jobGraph, policy, selectedModel);
         final List<HaierExecutionGraph> paretoHaierExecutionGraphs =
                 this.optimizer.optimize(jobGraph, policy, selectedModel);
-        return this.pickPlan(jobGraph, policy, paretoHaierExecutionGraphs);
+        return new SchedulingResult(this.pickPlan(jobGraph, policy, paretoHaierExecutionGraphs));
     }
 
     /**

@@ -29,9 +29,9 @@ import com.google.gson.GsonBuilder;
 import java.util.Base64;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.ResourceBundle;
 import java.util.concurrent.BlockingQueue;
 import java.util.logging.Logger;
-import java.util.ResourceBundle;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -222,8 +222,8 @@ public class SchedulerService extends AbstractE2DataService {
             }
         }
 
-        // FIXME(ckatsak): For now, a default OptimizationPolicy object is
-        //                 hardcoded here instead of being sent by Flink.
+        // TODO(ckatsak): For now, a default OptimizationPolicy object is
+        //                hardcoded here instead of being sent by Flink.
         //final String policyStr = "{\"policy\": {\"objectives\": [ {\"name\":\"execTime\", \"targetFunction\":\"MIN\", \"combineFunction\":\"MAX\"}, {\"name\":\"powerCons\", \"targetFunction\":\"MIN\", \"combineFunction\":\"SUM\"} ]}}";
         final String policyStr = "{" +
                             "\"policy\": {" +
@@ -242,17 +242,28 @@ public class SchedulerService extends AbstractE2DataService {
                             "}" +
                         "}";
 
-        final HaierExecutionGraph result = this.scheduler.schedule(jobGraph, OptimizationPolicy.parseJSON(policyStr));
+        final E2dScheduler.SchedulingResult result =
+                this.scheduler.schedule(jobGraph, OptimizationPolicy.parseJSON(policyStr));
         if (null == result) {
-            logger.finer("scheduler.schedule() returned null!");
+            logger.severe("E2dScheduler.SchedulingResult is null; something serious is going on!");
+            return generateResponse(Response.Status.INTERNAL_SERVER_ERROR, "");
+        }
+        if (result.isEmpty()) {
+            logger.info("It looks like none of the JobVertices in '" + jobGraph.toString() +
+                    "' can be offloaded to an accelerator.");
+            return generateResponse(Response.Status.OK, new ArrayList<>(0));
+        }
+        final HaierExecutionGraph resultGraph = result.getResult();
+        if (null == resultGraph) {
+            logger.severe("E2dScheduler.SchedulingResult.getResult() returned null!");
             logger.severe("Error allocating resources for '" + jobGraph.toString() + "'");
             return generateResponse(Response.Status.INTERNAL_SERVER_ERROR, "");
         }
 
         logger.info("Scheduling result for '" + jobGraph.toString() + "':\n" + result);
 
-        final List<SerializableScheduledJobVertex> responseBody = result.toSerializableScheduledJobVertexList();
-        logger.info("Response body returned to Flink for '" + jobGraph.toString() + "':\n" +
+        final List<SerializableScheduledJobVertex> responseBody = resultGraph.toSerializableScheduledJobVertexList();
+        logger.finest("Response body returned to Flink for '" + jobGraph.toString() + "':\n" +
                 new GsonBuilder().setPrettyPrinting().create().toJson(responseBody));
         return generateResponse(Response.Status.OK, responseBody);
     }

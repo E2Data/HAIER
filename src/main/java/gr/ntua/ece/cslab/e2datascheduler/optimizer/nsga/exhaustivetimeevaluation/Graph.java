@@ -88,6 +88,10 @@ class Graph {
      * @return the GCD of the given list of integers.
      */
     private static int multiGcd(final List<Integer> durations) {
+        if (durations.size() == 1) {
+            return durations.get(0);
+        }
+
         int totalGcd = gcd(durations.get(0), durations.get(1));
         if (durations.size() > 2) {
             for (int i = 2; i < durations.size(); i++) {
