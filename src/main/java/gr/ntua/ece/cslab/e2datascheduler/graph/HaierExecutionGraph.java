@@ -249,16 +249,24 @@ public class HaierExecutionGraph {
         //
         // Now, if the JobVertex at hand contains chained operators:
         //
+        boolean chainStartingWithDataSource = false;
         // Check whether the first operator in the chain has a Driver class. If it does not, then the whole JobVertex
-        // cannot be offloaded to an accelerator.
-        // FIXME(ckatsak): Make sure that the assumption in the comment above is true. E.g., is a JobVertex like
-        //                 `CHAIN DataSource -> Map -> Map` really non-acceleratable?
+        // cannot be offloaded to an accelerator, unless the first operator in the chain is a DataSource.
         if (!config.contains(driverClassOption)) {
-            return false;
+            // If the first operator in the chain is a DataSource, then the JobVertex might be acceleratable
+            // (unless some of the rest of the operators in the chain is not acceleratable).
+            // In any other case of missing a Driver class in the first operator in a chain, consider
+            // it non-acceleratable. FIXME(ckatsak): Is this assumption correct? E.g., is a `CHAIN Sync -> Map` even
+            //                                       possible, let alone acceleratable?
+            if (jobVertex.getName().startsWith("CHAIN DataSource")) {
+                chainStartingWithDataSource = true;
+            } else {
+                return false;
+            }
         }
         // If the first operator in the chain does have a Driver class, then if this Driver class is not supported by
         // TornadoVM, the whole JobVertex is non-acceleratable. FIXME?(ckatsak): Related to the FIXME above.
-        {
+        if (!chainStartingWithDataSource) {
             final String driverClassCanonicalName = config.getString(driverClassOption);
             final String[] splitDriverClass = driverClassCanonicalName.split("\\.");
             final String driverClassBaseName = splitDriverClass[splitDriverClass.length - 1];
