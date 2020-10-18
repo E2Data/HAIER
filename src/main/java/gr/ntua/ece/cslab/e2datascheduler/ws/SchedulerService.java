@@ -21,6 +21,7 @@ import org.apache.flink.runtime.jobmanager.scheduler.SlotSharingGroup;
 
 import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
 import org.glassfish.jersey.media.multipart.FormDataParam;
+import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
@@ -204,8 +205,10 @@ public class SchedulerService extends AbstractE2DataService {
     @Consumes(MediaType.MULTIPART_FORM_DATA)
     @Produces(MediaType.APPLICATION_JSON)
     public Response flink_schedule(
-            @FormDataParam("file") InputStream uploadedInputStream,
-            @FormDataParam("file") FormDataContentDisposition fileDetail) {
+            //@FormDataParam("file") InputStream uploadedInputStream,
+            @FormDataParam("file") final FormDataBodyPart formDataBodyPart,
+            @FormDataParam("file") final FormDataContentDisposition fileDetail) {
+        final InputStream uploadedInputStream = formDataBodyPart.getValueAs(InputStream.class);
         logger.finest("Just received a POST request on /e2data/flink-schedule !");
 
         final String filePath = tmpRootPath + fileDetail.getFileName();

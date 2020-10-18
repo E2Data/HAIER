@@ -3,10 +3,13 @@ package gr.ntua.ece.cslab.e2datascheduler.server;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
+import org.glassfish.jersey.jackson.JacksonFeature;
+import org.glassfish.jersey.media.multipart.MultiPartFeature;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.servlet.ServletContainer;
 
 import java.util.ResourceBundle;
+
 
 public class HaierServer {
 
@@ -16,6 +19,8 @@ public class HaierServer {
     private static Server configureServer() {
         ResourceConfig resourceConfig = new ResourceConfig();
         resourceConfig.packages("gr.ntua.ece.cslab.e2datascheduler.ws");
+        resourceConfig.register(MultiPartFeature.class);
+        resourceConfig.register(JacksonFeature.class);
         ServletContainer servletContainer = new ServletContainer(resourceConfig);
         ServletHolder sh = new ServletHolder(servletContainer);
         Server server = new Server(HAIER_PORT);
@@ -27,7 +32,6 @@ public class HaierServer {
     }
 
     public static void main(String[] args){
-
         Server server = configureServer();
         try {
             server.start();
@@ -38,4 +42,5 @@ public class HaierServer {
             server.destroy();
         }
     }
+
 }

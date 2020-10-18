@@ -25,7 +25,8 @@
     <init-param>
       <!-- Related multipart features, required for JobGraph file uploading -->
       <param-name>jersey.config.server.provider.classnames</param-name>
-      <param-value>org.glassfish.jersey.media.multipart.MultiPartFeature</param-value>
+<!--      <param-value>org.glassfish.jersey.media.multipart.MultiPartFeature</param-value>-->
+      <param-value>org.glassfish.jersey.media.multipart.MultiPartFeature;org.glassfish.jersey.filter.LoggingFilter</param-value>
     </init-param>
 
     <load-on-startup>1</load-on-startup>

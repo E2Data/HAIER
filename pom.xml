@@ -17,12 +17,12 @@
         <jaxrs.version>2.1</jaxrs.version>
         <gson.version>2.8.5</gson.version>
         <moea.version>2.12</moea.version>
-	    <junit.jupiter.version>5.4.2</junit.jupiter.version>
         <jetty.version>9.3.27.v20190418</jetty.version>
+        <flink.version>1.11.1</flink.version>
     </properties>
 
     <dependencies>
-        <dependency>
+        <dependency> <!-- Unused declared dependency -->
             <groupId>javax.servlet</groupId>
             <artifactId>javax.servlet-api</artifactId>
             <version>3.1.0</version>
@@ -30,7 +30,7 @@
             <scope>provided</scope>
         </dependency>
         <!-- Jersey 2 dependencies-->
-        <dependency>
+        <dependency> <!-- Unused declared dependency -->
             <groupId>org.glassfish.jersey.containers</groupId>
             <!-- if your container implements Servlet API older than 3.0, use "jersey-container-servlet-core"  -->
             <artifactId>jersey-container-servlet</artifactId>
@@ -41,22 +41,56 @@
             <artifactId>jersey-server</artifactId>
             <version>${jersey2.version}</version>
         </dependency>
-        <dependency>
+        <dependency> <!-- Unused declared dependency -->
             <groupId>javax.ws.rs</groupId>
             <artifactId>javax.ws.rs-api</artifactId>
             <version>${jaxrs.version}</version>
         </dependency>
-        <dependency>
+        <dependency> <!-- Unused declared dependency -->
             <groupId>org.glassfish.jersey.inject</groupId>
             <artifactId>jersey-hk2</artifactId>
             <version>${jersey2.version}</version>
         </dependency>
-
+        <dependency> <!-- Unused declared dependency -->
+            <groupId>org.glassfish.jersey.containers</groupId>
+            <artifactId>jersey-container-grizzly2-servlet</artifactId>
+            <version>${jersey2.version}</version>
+        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>org.glassfish.jersey.containers</groupId>-->
+<!--            <artifactId>jersey-container-jetty-http</artifactId>-->
+<!--            <version>${jersey2.version}</version>-->
+<!--        </dependency>-->
         <dependency>
             <groupId>org.glassfish.jersey.media</groupId>
             <artifactId>jersey-media-json-jackson</artifactId>
             <version>${jersey2.version}</version>
         </dependency>
+<!--        <dependency>--> <!--<!- Used undeclared dependency ->-->
+<!--            <groupId>com.fasterxml.jackson.core</groupId>-->
+<!--            <artifactId>jackson-annotations</artifactId>-->
+<!--            <version>2.9.8</version>-->
+<!--        </dependency>-->
+<!--        <dependency>--> <!--<!- Used undeclared dependency ->-->
+<!--            <groupId>jakarta.ws.rs</groupId>-->
+<!--            <artifactId>jakarta.ws.rs-api</artifactId>-->
+<!--            <version>2.1.5</version>-->
+<!--        </dependency>-->
+<!--        <dependency>--> <!--<!- Used undeclared dependency ->-->
+<!--            <groupId>org.glassfish.jersey.containers</groupId>-->
+<!--            <artifactId>jersey-container-servlet-core</artifactId>-->
+<!--            <version>${jersey2.version}</version>-->
+<!--        </dependency>-->
+<!--        <dependency>-->
+<!--            <groupId>com.fasterxml.jackson.jaxrs</groupId>-->
+<!--            <artifactId>jackson-jaxrs-json-provider</artifactId>-->
+<!--            <version>2.9.8</version>-->
+<!--        </dependency>-->
+<!--        <dependency>-->
+<!--            <groupId>org.glassfish.jersey.media</groupId>-->
+<!--            <artifactId>jersey-media-moxy</artifactId>-->
+<!--            <version>${jersey2.version}</version>-->
+<!--        </dependency>-->
 
         <!-- NOTE(ckatsak): This lets us use multipart features (for JobGraph file uploading) -->
         <dependency>
@@ -77,19 +111,6 @@
             <artifactId>gson</artifactId>
             <version>${gson.version}</version>
         </dependency>
-        <!-- JUnit -->
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-api</artifactId>
-	    <version>${junit.jupiter.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-engine</artifactId>
-	        <version>${junit.jupiter.version}</version>
-            <scope>test</scope>
-        </dependency>
 
         <!-- Embedded Jetty -->
         <dependency>
@@ -97,11 +118,11 @@
             <artifactId>jetty-servlet</artifactId>
             <version>${jetty.version}</version>
         </dependency>
-        <dependency>
-            <groupId>org.eclipse.jetty</groupId>
-            <artifactId>jetty-util</artifactId>
-            <version>${jetty.version}</version>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>org.eclipse.jetty</groupId>-->
+<!--            <artifactId>jetty-util</artifactId>-->
+<!--            <version>${jetty.version}</version>-->
+<!--        </dependency>-->
         <dependency>
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-server</artifactId>
@@ -113,7 +134,7 @@
         <dependency>
             <groupId>org.apache.flink</groupId>
             <artifactId>flink-runtime_2.12</artifactId>
-            <version>1.11.1</version>
+            <version>${flink.version}</version>
             <scope>compile</scope>
         </dependency>
 
@@ -151,8 +172,9 @@
                     </executions>
                 </plugin>
 
-                <!-- plugin to automatically deploy an embedded Jetty server
-                     mvn jetty:run -->
+                <!-- plugin to automatically deploy an embedded Jetty server:
+                     $ mvn jetty:run
+                     $ mvn jetty:run-forked -->
                 <plugin>
                     <groupId>org.eclipse.jetty</groupId>
                     <artifactId>jetty-maven-plugin</artifactId>
@@ -177,6 +199,38 @@
                     <version>3.1.1</version>
                     <configuration>
                     </configuration>
+                </plugin>
+
+                <!-- Create a single executable fat JAR -->
+                <plugin>
+                    <!--<groupId>org.apache.maven.plugins</groupId>  NOTE(ckatsak): Not required here -->
+                    <artifactId>maven-assembly-plugin</artifactId>
+                    <version>3.3.0</version>
+                    <configuration>
+                        <!-- Use default descriptor for producing a fat JAR
+                            (http://maven.apache.org/plugins/maven-assembly-plugin/usage.html) -->
+                        <descriptorRefs>
+                            <descriptorRef>jar-with-dependencies</descriptorRef>
+                        </descriptorRefs>
+                        <!-- Use `maven-archiver` to produce a manifest indicating where Main is
+                            (http://maven.apache.org/plugins/maven-assembly-plugin/usage.html) -->
+                        <archive>
+                            <manifest>
+                                <mainClass>gr.ntua.ece.cslab.e2datascheduler.server.HaierServer</mainClass>
+                            </manifest>
+                        </archive>
+                    </configuration>
+                    <executions>
+                        <!-- Bind `assembly:single` goal to `package` phase
+                            (http://maven.apache.org/plugins/maven-assembly-plugin/usage.html) -->
+                        <execution>
+                            <id>make-assembly</id> <!-- this is used for inheritance merges -->
+                            <phase>package</phase> <!-- bind to the packaging phase... -->
+                            <goals>
+                                <goal>single</goal> <!-- ...the `single` goal -->
+                            </goals>
+                        </execution>
+                    </executions>
                 </plugin>
 
             </plugins>
