@@ -66,6 +66,8 @@ public class E2dScheduler {
         Logger.getLogger("").addHandler(consoleHandler);
         Logger.getLogger("").addHandler(haierHandler);
 
+        logger.info("JVM Runtime Information:\n" + JVMRuntimeInfo());
+
         this.models = new ModelLibrary();
 
         final String[] modelsWithPaths = resourceBundle.getString("supported.models").split(",");
@@ -293,4 +295,22 @@ public class E2dScheduler {
     public SelectionQueue<CandidatePlan> getSelectionQueue(final String jobId) {
         return this.planQueues.get(jobId);
     }
+
+
+    //---------------------------------------------------------------------------------------------
+
+
+    /**
+     * Retrieve information about the current JVM runtime.
+     *
+     * @return a {@link String} containing information about the current JVM runtime
+     */
+    public static String JVMRuntimeInfo() {
+        String ret = "";
+        ret += System.getProperty("java.runtime.name") + "\n";
+        ret += System.getProperty("java.vm.vendor") + " " + System.getProperty("java.runtime.version") + "\n";
+        ret += "java.home = " + System.getProperty("java.home") + "\n";
+        return ret;
+    }
+
 }

@@ -9,8 +9,11 @@ import gr.ntua.ece.cslab.e2datascheduler.optimizer.nsga.NSGAIIParameters;
 import gr.ntua.ece.cslab.e2datascheduler.util.HaierLogHandler;
 import gr.ntua.ece.cslab.e2datascheduler.util.SelectionQueue;
 
+import org.apache.flink.api.common.functions.MapFunction;
+import org.apache.flink.api.common.functions.RichMapFunction;
 import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.configuration.ConfigOptions;
+import org.apache.flink.runtime.blob.PermanentBlobKey;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.JobVertex;
 import org.apache.flink.runtime.jobmanager.scheduler.CoLocationGroup;
@@ -31,6 +34,15 @@ import javax.ws.rs.core.Response;
 
 import com.google.gson.GsonBuilder;
 
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.ObjectInputStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
@@ -40,13 +52,6 @@ import java.util.Map;
 import java.util.ResourceBundle;
 import java.util.concurrent.BlockingQueue;
 import java.util.logging.Logger;
-
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.ObjectInputStream;
-import java.io.IOException;
-import java.io.InputStream;
 
 /**
  * REST API of {@link E2dScheduler}
@@ -298,6 +303,7 @@ public class SchedulerService extends AbstractE2DataService {
 
 
     private static void debuggingInspection(final JobGraph jobGraph) {
+        logger.info("JVM Runtime Information:\n" + E2dScheduler.JVMRuntimeInfo());
 ///        for (JobVertex vertex : jobGraph.getVerticesSortedTopologicallyFromSources()) {
 ///            String str = "JobVertex: " + vertex.getID().toString() + ", " + vertex.getName() + "\n";
 ///            HashMap confData = (HashMap) vertex.getConfiguration().toMap();
@@ -344,9 +350,42 @@ public class SchedulerService extends AbstractE2DataService {
             for (Map.Entry<String, String> entry : confData.entrySet()) {
                 inspectionMsg += "\"" + entry.getKey() + "\" : \"" + entry.getValue() + "\"\n";
             }
-            logger.finest("Whole configuration:\n" + inspectionMsg + "\n");
+            logger.finest("Whole configuration:\n" + inspectionMsg);
+
+            logger.finest("(JobVertex-" + vertex.getID().toString() + ").getInvokableClassName(): " +
+                    vertex.getInvokableClassName() + "\n");
+
+            inspectionMsg = "";
+            if (null != udf && vertex.getConfiguration().contains(driverClassOption)) {
+                final String driverClass = vertex.getConfiguration().getValue(driverClassOption);
+                if (driverClass.endsWith("MapDriver")) {
+                    RichMapFunction mapLambda;
+                    try (final ObjectInputStream objectIn = new ObjectInputStream(new ByteArrayInputStream(udf))) {
+                        mapLambda = (RichMapFunction) objectIn.readObject();
+                        inspectionMsg += "CKATSAK: Successfully deserialized the Map Lambda from the UDF byte array! (" +
+                                mapLambda.toString() + ")\n";
+                    } catch (Exception e) {
+                        final StringWriter sw = new StringWriter();
+                        inspectionMsg += "Error deserializing the UDF byte array... :\n";
+                        e.printStackTrace(new PrintWriter(sw));
+                        inspectionMsg += sw.toString();
+                    }
+                    logger.finest(inspectionMsg + "\n\n");
+                }
+            }
         }
         HaierExecutionGraph.logOffloadability(jobGraph);
+
+        String userJarsPaths = "User Jars Paths:\n";
+        for (org.apache.flink.core.fs.Path p : jobGraph.getUserJars()) {
+            userJarsPaths += "- " + p.getName() + " @ " + p.getPath() + "\n";
+        }
+        logger.finest(userJarsPaths);
+        userJarsPaths = "User Jar BLOB Keys:\n";
+        for (PermanentBlobKey p : jobGraph.getUserJarBlobKeys()) {
+            userJarsPaths += "- " + p.toString() + "\n";
+        }
+        logger.finest(userJarsPaths);
     }
 
 }
