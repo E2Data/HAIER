@@ -4,6 +4,7 @@ import gr.ntua.ece.cslab.e2datascheduler.E2dScheduler;
 import gr.ntua.ece.cslab.e2datascheduler.beans.graph.SerializableScheduledJobVertex;
 import gr.ntua.ece.cslab.e2datascheduler.beans.gui.CandidatePlan;
 import gr.ntua.ece.cslab.e2datascheduler.beans.optpolicy.OptimizationPolicy;
+import gr.ntua.ece.cslab.e2datascheduler.beans.profiling.TornadoProfilingInfoRoot;
 import gr.ntua.ece.cslab.e2datascheduler.graph.HaierExecutionGraph;
 import gr.ntua.ece.cslab.e2datascheduler.optimizer.nsga.NSGAIIParameters;
 import gr.ntua.ece.cslab.e2datascheduler.util.HaierLogHandler;
@@ -194,6 +195,30 @@ public class SchedulerService extends AbstractE2DataService {
         }
 
         return generateResponse(Response.Status.OK, readyLogs);
+    }
+
+
+    // --------------------------------------------------------------------------------------------
+
+
+    @Path("/profiling")
+    @POST
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response profilingInfo(final TornadoProfilingInfoRoot tornadoProfilingInfoRoot) {
+        logger.finest("Just received a POST request on /e2data/profiling/" + " !");
+
+        // Make sure the input TornadoProfilingInfoRoot is OK.
+        if (null == tornadoProfilingInfoRoot) {
+            logger.warning("The TornadoProfilingInfoRoot object received appears to be null.");
+            return generateResponse(Response.Status.BAD_REQUEST, "");
+        }
+        logger.finer("TornadoProfilingInfoRoot object received by Tornado: " + tornadoProfilingInfoRoot);
+
+        // FIXME(ckatsak): Make use of it, somehow!
+        //                  - 500 INTERNAL SERVER ERROR on processing failure
+
+        return generateResponse(Response.Status.NO_CONTENT, "");
     }
 
 
