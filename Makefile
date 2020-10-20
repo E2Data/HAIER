@@ -1,10 +1,10 @@
 ##
-## ckatsak, Sun Oct 18 22:41:36 EEST 2020
+## ckatsak, Tue Oct 20 16:09:38 EEST 2020
 ##
 MVN ?= /opt/apache-maven-3.6.3/bin/mvn
 JAVA_HOME ?= /opt/ckatsak/jdk-jvmci/graal-jvmci-8/openjdk1.8.0_265/linux-amd64/product
 
-TARGETS = run run-forked fatjar dep-tree dep-anal clean
+TARGETS = run run-forked fatjar dep-tree dep-anal clean ejh
 .PHONY: help $(TARGETS)
 
 help:  ### Makefile-help-message
@@ -15,26 +15,24 @@ help:  ### Makefile-help-message
 	@echo "JAVA_HOME =" $(JAVA_HOME)
 	@echo "MVN =" $(MVN)
 
-run:  ### jetty-mvn-plugin
-	@echo $(JAVA_HOME)
+run: ejh  ### jetty-mvn-plugin
 	$(MVN) clean jetty:run
 
-run-forked:  ### jetty-mvn-plugin-fork
-	@echo $(JAVA_HOME)
+run-forked: ejh  ### jetty-mvn-plugin-fork
 	$(MVN) clean jetty:run-forked
 
-fatjar:  ### fat-executable-jar
-	@echo $(JAVA_HOME)
+fatjar: ejh  ### fat-executable-jar
 	$(MVN) clean package assembly:single
 
-dep-tree:  ### dependency-tree
-	@echo $(JAVA_HOME)
+dep-tree: ejh  ### dependency-tree
 	$(MVN) dependency:tree
 
-dep-anal:  ### dependency-analysis
-	@echo $(JAVA_HOME)
+dep-anal: ejh  ### dependency-analysis
 	$(MVN) dependency:analyze
 
-clean:  ### clean
-	@echo $(JAVA_HOME)
+clean: ejh  ### clean
 	$(MVN) clean
+
+ejh:
+	@echo $(JAVA_HOME)
+
