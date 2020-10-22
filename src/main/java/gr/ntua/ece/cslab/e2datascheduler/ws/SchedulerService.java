@@ -8,10 +8,12 @@ import gr.ntua.ece.cslab.e2datascheduler.beans.profiling.TornadoProfilingInfoRoo
 import gr.ntua.ece.cslab.e2datascheduler.graph.HaierExecutionGraph;
 import gr.ntua.ece.cslab.e2datascheduler.optimizer.nsga.NSGAIIParameters;
 import gr.ntua.ece.cslab.e2datascheduler.util.HaierLogHandler;
+import gr.ntua.ece.cslab.e2datascheduler.util.udf.HaierObjectInputStreamOfFlinkUDF;
+import gr.ntua.ece.cslab.e2datascheduler.util.udf.HaierUDFLoader;
 import gr.ntua.ece.cslab.e2datascheduler.util.SelectionQueue;
 
 import org.apache.flink.api.common.functions.MapFunction;
-import org.apache.flink.api.common.functions.RichMapFunction;
+import org.apache.flink.api.common.operators.util.UserCodeObjectWrapper;
 import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.configuration.ConfigOptions;
 import org.apache.flink.runtime.blob.PermanentBlobKey;
@@ -54,6 +56,7 @@ import java.util.Map;
 import java.util.ResourceBundle;
 import java.util.concurrent.BlockingQueue;
 import java.util.logging.Logger;
+
 
 /**
  * REST API of {@link E2dScheduler}
@@ -283,7 +286,7 @@ public class SchedulerService extends AbstractE2DataService {
                             "}" +
                         "}";
 
-        debuggingInspection(jobGraph); // FIXME(ckatsak) debugging logging
+        this.debuggingInspection(jobGraph); // FIXME(ckatsak) debugging logging
 
         final E2dScheduler.SchedulingResult result =
                 this.scheduler.schedule(jobGraph, OptimizationPolicy.parseJSON(policyStr));
@@ -330,7 +333,7 @@ public class SchedulerService extends AbstractE2DataService {
     // --------------------------------------------------------------------------------------------
 
 
-    private static void debuggingInspection(final JobGraph jobGraph) {
+    private void debuggingInspection(final JobGraph jobGraph) {
         logger.info("JVM Runtime Information:\n" + E2dScheduler.JVMRuntimeInfo());
 ///        for (JobVertex vertex : jobGraph.getVerticesSortedTopologicallyFromSources()) {
 ///            String str = "JobVertex: " + vertex.getID().toString() + ", " + vertex.getName() + "\n";
@@ -348,6 +351,11 @@ public class SchedulerService extends AbstractE2DataService {
 ///            }
 ///            logger.finest(str);
 ///        }
+
+        final HaierUDFLoader haierUDFLoader = new HaierUDFLoader(jobGraph, this.getClass().getClassLoader());
+        final List<Class<?>> mapClasses = haierUDFLoader.getAllUserDefinedMapFunctions();
+        final List<Class<?>> reduceClasses = haierUDFLoader.getAllUserDefinedReduceFunctions();
+
         for (JobVertex vertex : jobGraph.getVerticesSortedTopologicallyFromSources()) {
             // General information about the JobVertex at hand:
             String inspectionMsg = "JobVertex: " + vertex.getID().toString() + "\n";
@@ -383,16 +391,24 @@ public class SchedulerService extends AbstractE2DataService {
             logger.finest("(JobVertex-" + vertex.getID().toString() + ").getInvokableClassName(): " +
                     vertex.getInvokableClassName() + "\n");
 
+            // ====================================================================================
+            //   vvv   User's lambda deserialization   vvv
+            // ====================================================================================
+
             inspectionMsg = "";
             if (null != udf && vertex.getConfiguration().contains(driverClassOption)) {
                 final String driverClass = vertex.getConfiguration().getValue(driverClassOption);
                 if (driverClass.endsWith("MapDriver")) {
-                    RichMapFunction mapLambda;
-                    try (final ObjectInputStream objectIn = new ObjectInputStream(new ByteArrayInputStream(udf))) {
-                        mapLambda = (RichMapFunction) objectIn.readObject();
-                        inspectionMsg += "CKATSAK: Successfully deserialized the Map Lambda from the UDF byte array! (" +
-                                mapLambda.toString() + ")\n";
-                    } catch (Exception e) {
+                    final UserCodeObjectWrapper userCodeObjectWrapper;
+                    final MapFunction mapLambda;
+                    try (final ObjectInputStream objectInputStream =
+                                 new HaierObjectInputStreamOfFlinkUDF(new ByteArrayInputStream(udf), haierUDFLoader)
+                    ) {
+                        userCodeObjectWrapper = (UserCodeObjectWrapper) objectInputStream.readObject();
+                        inspectionMsg += "Successfully deserialized the UDF byte array: " + userCodeObjectWrapper + "\n";
+                        mapLambda = (MapFunction) userCodeObjectWrapper.getUserCodeObject();
+                        inspectionMsg += "Successfully retrieved the Map lambda from it: " + mapLambda + "\n";
+                    } catch (final IOException | ClassNotFoundException e) {
                         final StringWriter sw = new StringWriter();
                         inspectionMsg += "Error deserializing the UDF byte array... :\n";
                         e.printStackTrace(new PrintWriter(sw));
@@ -401,12 +417,22 @@ public class SchedulerService extends AbstractE2DataService {
                     logger.finest(inspectionMsg + "\n\n");
                 }
             }
+
+            // ====================================================================================
+            //   ^^^   User's lambda deserialization   ^^^
+            // ====================================================================================
         }
         HaierExecutionGraph.logOffloadability(jobGraph);
 
+        // ========================================================================================
+        //   vvv   User's JAR inspection/manipulation   vvv
+        // ========================================================================================
+
+        final List<org.apache.flink.core.fs.Path> jars = new ArrayList<>();
         String userJarsPaths = "User Jars Paths:\n";
         for (org.apache.flink.core.fs.Path p : jobGraph.getUserJars()) {
             userJarsPaths += "- " + p.getName() + " @ " + p.getPath() + "\n";
+            jars.add(p);
         }
         logger.finest(userJarsPaths);
         userJarsPaths = "User Jar BLOB Keys:\n";
@@ -414,6 +440,39 @@ public class SchedulerService extends AbstractE2DataService {
             userJarsPaths += "- " + p.toString() + "\n";
         }
         logger.finest(userJarsPaths);
+
+        logger.finest("jobGraph.hasUsercodeJarFiles() = " + jobGraph.hasUsercodeJarFiles());
+
+        String inspectionMsg = "Scanning JAR files for .class files:";
+        for (org.apache.flink.core.fs.Path path : jars) {
+            inspectionMsg += "\n* Class names in '" + path.getPath() + "':\n";
+            try {
+                final List<String> foundClasses = HaierUDFLoader.scanJarFileForClasses(new File(path.getPath()));
+                for (String className : foundClasses) {
+                    inspectionMsg += "\t- " + className + "\n";
+                }
+            } catch (IOException e) {
+                final StringWriter sw = new StringWriter();
+                inspectionMsg += "Error scanning for .class files in '" + path.getPath() + "' ... :\n";
+                e.printStackTrace(new PrintWriter(sw));
+                inspectionMsg += sw.toString() + "";
+            }
+        }
+        logger.finest(inspectionMsg + "\n");
+
+        inspectionMsg = "\n* User-defined classes implementing `MapFunction`:\n";
+        for (Class<?> clazz : haierUDFLoader.getAllUserDefinedMapFunctions()) {
+            inspectionMsg += "\t- " + clazz.toString() + "\n";
+        }
+        inspectionMsg += "\n* User-defined classes implementing `ReduceFunction`:\n";
+        for (Class<?> clazz : haierUDFLoader.getAllUserDefinedReduceFunctions()) {
+            inspectionMsg += "\t- " + clazz.toString() + "\n";
+        }
+        logger.finest(inspectionMsg);
+
+        // ========================================================================================
+        //   ^^^   User's JAR inspection/manipulation   ^^^
+        // ========================================================================================
     }
 
 }
