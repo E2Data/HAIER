@@ -1,10 +1,10 @@
 ##
-## ckatsak, Tue Oct 20 16:09:38 EEST 2020
+## ckatsak, Mon Oct 26 23:35:00 EET 2020
 ##
 MVN ?= /opt/apache-maven-3.6.3/bin/mvn
 JAVA_HOME ?= /opt/ckatsak/jdk-jvmci/graal-jvmci-8/openjdk1.8.0_265/linux-amd64/product
 
-TARGETS = run run-forked fatjar dep-tree dep-anal clean ejh
+TARGETS = run run-forked run-jvm fatjar dep-tree dep-anal clean ejh
 .PHONY: help $(TARGETS)
 
 help:  ### Makefile-help-message
@@ -16,10 +16,14 @@ help:  ### Makefile-help-message
 	@echo "MVN =" $(MVN)
 
 run: ejh  ### jetty-mvn-plugin
-	$(MVN) clean jetty:run
+	-$(MVN) clean jetty:run
 
 run-forked: ejh  ### jetty-mvn-plugin-fork
-	$(MVN) clean jetty:run-forked
+	-$(MVN) clean jetty:run-forked
+
+run-jvm: ejh  ### run-fatjar-on-jvm
+	-$(JAVA_HOME)/bin/java \
+		-jar ./target/scheduler-jar-with-dependencies.jar
 
 fatjar: ejh  ### fat-executable-jar
 	$(MVN) clean package assembly:single
