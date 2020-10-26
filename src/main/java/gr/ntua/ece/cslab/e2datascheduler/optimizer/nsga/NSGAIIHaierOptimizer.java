@@ -22,8 +22,8 @@ import java.util.logging.Logger;
 
 
 /**
- * Implementation of an E2Data HAIER's optimizer that is based on the use of the NSGA0II genetic algorithm and
- * Machine Learning models for the evaluation of each of its generations.
+ * Implementation of an E2Data HAIER's optimizer that is based on the use of the NSGA-II genetic algorithm and
+ * Machine Learning models for the evaluation of each generation.
  */
 public final class NSGAIIHaierOptimizer implements Optimizer {
 
@@ -57,8 +57,8 @@ public final class NSGAIIHaierOptimizer implements Optimizer {
     }
 
     /**
-     * Implementation of an E2Data HAIER's optimizer that is based on the use of the NSGA-II genetic algorithm and
-     * Machine Learning models for the evaluation of each of its generations.
+     * Implementation of an {@link Optimizer} that is based on the use of the NSGA-II genetic algorithm and
+     * Machine Learning models for the evaluation of each generation.
      */
     public NSGAIIHaierOptimizer() {
         this.devices = new ArrayList<>();
@@ -69,11 +69,11 @@ public final class NSGAIIHaierOptimizer implements Optimizer {
     }
 
     /**
-     * Retrieve the values of NSGAIIHaierOptimizer's current configuration parameters in a synchronized way with
-     * respect to concurrent setters.
+     * Retrieve the values of {@link NSGAIIHaierOptimizer}'s current configuration parameters in a synchronized way
+     * with respect to concurrent setters.
      *
-     * @return the values of NSGAIIHaierOptimizer's current configuration parameters; an object that can be safely
-     *         casted to {@link NSGAIIParameters}.
+     * @return The values of {@link NSGAIIHaierOptimizer}'s current configuration parameters; an object that can be
+     *         safely casted to {@link NSGAIIParameters}
      */
     @Override
     public synchronized Parameters retrieveConfiguration() {
@@ -85,8 +85,8 @@ public final class NSGAIIHaierOptimizer implements Optimizer {
     /**
      * Set new values for the NSGA-II parameters in a synchronized way with respect to concurrent getters.
      *
-     * @param parameters contains the new values of the NSGA-II parameters to be set; must be an instance of the
-     *                   {@link NSGAIIParameters} class.
+     * @param parameters Contains the new values of the NSGA-II parameters to be set; must be an instance of the
+     *                   {@link NSGAIIParameters} class
      */
     @Override
     public synchronized void configure(final Parameters parameters) {

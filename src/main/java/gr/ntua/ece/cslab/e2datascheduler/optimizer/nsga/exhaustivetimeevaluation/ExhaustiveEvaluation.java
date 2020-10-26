@@ -54,9 +54,11 @@ public class ExhaustiveEvaluation extends TimeEvaluationAlgorithm {
             tasks.add(new Task(
                     computationalJobVertex.getIndex(),
                     computationalJobVertex.getAssignedResource(),
-                    this.mlModel.predict("execTime",
+                    this.mlModel.predict(
+                            "execTime",
                             computationalJobVertex.getAssignedResource(),
-                            computationalJobVertex.getSourceCode()),
+                            computationalJobVertex.getScheduledJobVertex()
+                    ),
                     computationalJobVertex.getChildren(),
                     computationalJobVertex.getParents(),
                     computationalJobVertex.isRoot()

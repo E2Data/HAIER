@@ -1,6 +1,7 @@
 package gr.ntua.ece.cslab.e2datascheduler.ml.impl;
 
 import gr.ntua.ece.cslab.e2datascheduler.beans.cluster.HwResource;
+import gr.ntua.ece.cslab.e2datascheduler.graph.ScheduledJobVertex;
 import gr.ntua.ece.cslab.e2datascheduler.ml.Model;
 
 import com.google.gson.Gson;
@@ -14,15 +15,17 @@ import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 
+
 /**
  * Dummy class that mocks a model and serves integration purposes
  */
+@Deprecated
 public class DemoModel extends Model {
 
     /**
      * Predictions for all kernels can be cached here for future use.
      */
-    private final Map<String, Double> predictionCache = new HashMap<>();
+    private final Map<ScheduledJobVertex, Double> predictionCache = new HashMap<>();
 
     /**
      * Hard-coded URL for the model.
@@ -35,8 +38,10 @@ public class DemoModel extends Model {
      */
     private static final Map<String, Integer> DEVICE_TO_INDEX = createNewStaticDeviceMapping();
 
+    final String sourceCode = "__kernel void A(__global float* a, __global float* b, const int c) {const int d = get_global_id(0);int e, f, g, h;unsigned int i, j, k, l;for (unsigned int m = 0; m < k; m++) {for (unsigned int h = 0; h < i; h++) {for (unsigned int i = e; i < c; i++) {for (unsigned int j = a[g]; j < i; ++j) {a[i * c + i] = 0;}b[j] = j;}}}}";
+
     private static Map<String, Integer> createNewStaticDeviceMapping() {
-        final Map<String, Integer> ret = new HashMap<String, Integer>();
+        final Map<String, Integer> ret = new HashMap<>();
         ret.put("cpu", 0);
         ret.put("gtx", 1);
         ret.put("tesla", 2);
@@ -52,17 +57,16 @@ public class DemoModel extends Model {
     public double predict(
             final String objective,
             final HwResource device,
-            final String sourceCode) {
-        // FIXME(ckatsak): objective is ignored by the corresponding model for
-        //                 now: only the execution time is predicted, but the
-        //                 same prediction is returned for power consumption.
-        if (!this.predictionCache.containsKey(sourceCode)) {
-            final Map<String, Double> predictions = DemoModel.doPost(sourceCode);
-            this.predictionCache.put(sourceCode, predictions.get(device.getName()));
+            final ScheduledJobVertex scheduledJobVertex) {
+        // FIXME(ckatsak): objective is ignored by the corresponding model for now: only the execution time
+        //                 is predicted, but the same prediction is returned for power consumption.
+        if (!this.predictionCache.containsKey(scheduledJobVertex)) {
+            final Map<String, Double> predictions = DemoModel.doPost(this.sourceCode);
+            this.predictionCache.put(scheduledJobVertex, predictions.get(device.getName()));
         }
         //System.err.println("[DemoModel] Prediction retrieved for '" + device.getName() + "': " + this.predictionCache.get(sourceCode));
 
-        return this.predictionCache.get(sourceCode);
+        return this.predictionCache.get(scheduledJobVertex);
     }
 
     // --------------------------------------------------------------------------------------------

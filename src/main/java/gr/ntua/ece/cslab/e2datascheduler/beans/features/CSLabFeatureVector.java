@@ -3,6 +3,8 @@ package gr.ntua.ece.cslab.e2datascheduler.beans.features;
 import java.util.ArrayList;
 import java.util.List;
 
+
+@Deprecated
 public class CSLabFeatureVector {
 
       private double AggOps;

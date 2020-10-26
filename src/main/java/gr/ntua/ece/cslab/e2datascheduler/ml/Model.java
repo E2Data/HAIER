@@ -1,6 +1,9 @@
 package gr.ntua.ece.cslab.e2datascheduler.ml;
 
 import gr.ntua.ece.cslab.e2datascheduler.beans.cluster.HwResource;
+import gr.ntua.ece.cslab.e2datascheduler.graph.ScheduledJobVertex;
+
+import org.apache.flink.runtime.jobgraph.JobVertex;
 
 
 //TODO: @kbitsak: Do not modify this class!!!
@@ -13,23 +16,27 @@ public abstract class Model {
 
     protected String name;
 
-
     //TODO: @kbitsak: Implement the loading mechanism. You should assume that the model is stored
     //TODO: in the 'resources' folder of the project
     /**
      * Loads a model from disk.
      */
-    public abstract void load(String path);
+    public abstract void load(final String path);
 
-    //TODO: @kbitsak: Fill in the required code for predicting a value
     /**
-     * Makes a prediction given a generic feature vector
-     * @param featureVector A vector that comprise the model's input
-     * @return the predicted value
+     * Make a prediction of the value of the given {@code objective} if the provided
+     * {@link ScheduledJobVertex} is executed on the given {@code device} (i.e., {@link HwResource}).
+     *
+     * @param objective          The objective to make the prediction for
+     * @param device             The {@link HwResource} allocated for the underlying {@link JobVertex}
+     * @param scheduledJobVertex The {@link ScheduledJobVertex} that represents the {@link JobVertex} to be executed
+     * @return The predicted value for the provided objective
      */
-    //FIXME: (gmytil) A model refers to a specific objective and hardware device. Thus, it should accept only the
-    // source code as input parameter. Indexing models by objectives and devices should be taking place at the
-    // models library level.
-    public abstract double predict(final String objective, final HwResource device, final String sourceCode);
+    public abstract double predict(
+            final String objective,
+            final HwResource device,
+            final ScheduledJobVertex scheduledJobVertex);
+    //public abstract double predict(final String objective, final HwResource device, final String sourceCode);
     //public abstract double predict(String objective, HwResource device, List<Double> featureVector);
+
 }

@@ -6,6 +6,10 @@ import gr.ntua.ece.cslab.e2datascheduler.beans.optpolicy.OptimizationPolicy;
 import gr.ntua.ece.cslab.e2datascheduler.graph.HaierExecutionGraph;
 import gr.ntua.ece.cslab.e2datascheduler.graph.ScheduledJobVertex;
 import gr.ntua.ece.cslab.e2datascheduler.ml.Model;
+import gr.ntua.ece.cslab.e2datascheduler.ml.featurextraction.FeatureCache;
+import gr.ntua.ece.cslab.e2datascheduler.ml.featurextraction.cache.DummyCSLabFeatureCache;
+import gr.ntua.ece.cslab.e2datascheduler.ml.featurextraction.cache.TornadoFeatureCache;
+import gr.ntua.ece.cslab.e2datascheduler.ml.impl.TornadoModel;
 import gr.ntua.ece.cslab.e2datascheduler.optimizer.nsga.exhaustivetimeevaluation.ExhaustiveEvaluation;
 import gr.ntua.ece.cslab.e2datascheduler.optimizer.nsga.layeredtimeevaluation.LayeredEvaluation;
 
@@ -21,7 +25,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.ResourceBundle;
-
 import java.util.logging.Logger;
 
 
@@ -82,6 +85,11 @@ public class NSGAIIHaierPlanning extends AbstractProblem {
     final TimeEvaluationAlgorithm timeEvaluator;
 
     /**
+     *
+     */
+    private final FeatureCache featureCache;
+
+    /**
      * Execution plans that have been generated and aborted due to co-location constraints.
      */
     int abortedPlans;
@@ -112,7 +120,7 @@ public class NSGAIIHaierPlanning extends AbstractProblem {
             final JobGraph jobGraph,
             final OptimizationPolicy policy){
         super(jobGraph.getNumberOfVertices(), policy.getNumberOfObjectives());
-        this.devices = new ArrayList<HwResource>();
+        this.devices = new ArrayList<>();
         this.devices.addAll(devices);
         this.mlModel = mlModel;
         this.jobGraph = jobGraph;
@@ -136,6 +144,12 @@ public class NSGAIIHaierPlanning extends AbstractProblem {
                 break;
         }
 
+        if (this.mlModel instanceof TornadoModel) {
+            this.featureCache = new TornadoFeatureCache(this.jobGraph, this.devices);
+        } else {
+            this.featureCache = new DummyCSLabFeatureCache(this.jobGraph, this.devices);
+        }
+
         this.abortedPlans = 0;
         this.totalGeneratedPlans = 0;
     }
@@ -147,7 +161,7 @@ public class NSGAIIHaierPlanning extends AbstractProblem {
      * if that does not work well, it falls back to random order.
      *
      * @param jobGraph The initial Flink's {@link JobGraph} object.
-     * @return A list of {@link JobVertex} objects included in the given {@link JobGraph}.
+     * @return An array of {@link JobVertex} objects included in the given {@link JobGraph}
      */
     private JobVertex[] initializeJobVertices(final JobGraph jobGraph) {
         try {
@@ -240,9 +254,19 @@ public class NSGAIIHaierPlanning extends AbstractProblem {
         // Construct the HaierExecutionGraph.
         final HaierExecutionGraph haierExecutionGraph = new HaierExecutionGraph(this.jobGraph, this.jobVertices);
 
-        // Annotate each ScheduledJobVertex with its assigned hardware resource according to the current plan.
+        // Annotate each ScheduledJobVertex with its assigned hardware resource (and the
+        // associated code features for the ML model) according to the current plan.
         for (int jobVertexIndex = 0; jobVertexIndex < plan.length; jobVertexIndex++) {
-            haierExecutionGraph.assignResource(jobVertexIndex, this.devices.get(plan[jobVertexIndex]));
+            haierExecutionGraph.assignResourceAndFeatures(
+                    jobVertexIndex,
+                    this.devices.get(plan[jobVertexIndex]),
+                    // FIXME(ckatsak):  vv  Make sure the following is correct  vv
+                    this.featureCache.getFeatureVectors(
+                            this.jobVertices[jobVertexIndex],      // the JobVertex
+                            this.devices.get(plan[jobVertexIndex]) // the HwResource
+                    )
+                    // FIXME(ckatsak):  ^^  Make sure the above is correct  ^^
+            );
         }
 
         // Initialize the TimeEvaluationAlgorithm (e.g. construct the Layer objects for Layered time evaluation).
@@ -261,13 +285,11 @@ public class NSGAIIHaierPlanning extends AbstractProblem {
         double totalConsumption = 0.0d;
 
         for (ScheduledJobVertex scheduledJobVertex : haierExecutionGraph.getScheduledJobVertices()) {
-            // XXX(ckatsak): Two versions: one using the CSLabFeatureExtractor and another
-            // one passing the source code to the Model, as per @kbitsak 's preference.
-            totalConsumption += this.mlModel.predict("powerCons",
-                                                     scheduledJobVertex.getAssignedResource(),
-                                                     scheduledJobVertex.getSourceCode());
-            //totalConsumption += this.mlModel.predict("powerCons", scheduledJobVertex.getAssignedResource(),
-            //        CSLabFeatureExtractor.extract(scheduledJobVertex.getSourceCode()));
+            totalConsumption += this.mlModel.predict(
+                    "powerCons",
+                    scheduledJobVertex.getAssignedResource(),
+                    scheduledJobVertex
+            );
         }
 
         return totalConsumption;

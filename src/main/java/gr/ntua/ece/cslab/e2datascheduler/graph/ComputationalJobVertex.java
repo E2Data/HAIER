@@ -2,7 +2,10 @@ package gr.ntua.ece.cslab.e2datascheduler.graph;
 
 import gr.ntua.ece.cslab.e2datascheduler.beans.cluster.HwResource;
 
+import org.apache.flink.runtime.jobgraph.JobVertex;
+
 import java.util.ArrayList;
+
 
 /**
  * A single vertex in a {@link ComputationalGraph}.
@@ -23,16 +26,19 @@ public class ComputationalJobVertex {
     private final ArrayList<Integer> children;
 
     /**
-     * The (internal to HAIER) index of this vertex; probably different than the index of the {@link ScheduledJobVertex}
-     * associated with this vertex.
+     * The (internal to HAIER) index of this vertex; probably different than the
+     * index of the {@link ScheduledJobVertex} associated with this vertex.
      */
     private int index;
     /**
-     *
+     * Indicates whether the underlying {@link JobVertex} is a root vertex in
+     * the {@link org.apache.flink.runtime.jobgraph.JobGraph} it belongs.
      */
     private boolean isRoot;
 
+
     // --------------------------------------------------------------------------------------------
+
 
     /**
      * A single vertex in a {@link ComputationalGraph}.
@@ -71,8 +77,22 @@ public class ComputationalJobVertex {
         return this.scheduledJobVertex.getAssignedResource();
     }
 
-    public String getSourceCode() {
-        return this.scheduledJobVertex.getSourceCode();
+    /**
+     * Retrieve the {@link ScheduledJobVertex} that this {@link ComputationalJobVertex} represents.
+     *
+     * @return The underlying {@link ScheduledJobVertex}
+     */
+    public ScheduledJobVertex getScheduledJobVertex() {
+        return this.scheduledJobVertex;
+    }
+
+    /**
+     * Retrieve the {@link JobVertex} that this {@link ComputationalJobVertex} represents.
+     *
+     * @return The underlying {@link JobVertex}
+     */
+    public JobVertex getJobVertex() {
+        return this.scheduledJobVertex.getJobVertex();
     }
 
     /**
@@ -116,7 +136,9 @@ public class ComputationalJobVertex {
         }
     }
 
+
     // --------------------------------------------------------------------------------------------
+
 
     @Override
     public String toString() {
@@ -128,4 +150,5 @@ public class ComputationalJobVertex {
                 ", isRoot=" + isRoot +
                 '}';
     }
+
 }

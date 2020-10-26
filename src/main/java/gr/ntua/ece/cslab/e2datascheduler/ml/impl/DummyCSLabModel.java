@@ -1,19 +1,21 @@
 package gr.ntua.ece.cslab.e2datascheduler.ml.impl;
 
 import gr.ntua.ece.cslab.e2datascheduler.beans.cluster.HwResource;
+import gr.ntua.ece.cslab.e2datascheduler.graph.ScheduledJobVertex;
 import gr.ntua.ece.cslab.e2datascheduler.ml.Model;
-import gr.ntua.ece.cslab.e2datascheduler.ml.util.CSLabFeatureExtractor;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.List;
 import java.util.Random;
 
+import java.util.logging.Level;
 import java.util.logging.Logger;
+
 
 /**
  * Dummy class that mocks a model and serves integration purposes
  */
+@Deprecated
 public class DummyCSLabModel extends Model {
 
     private static final Logger logger = Logger.getLogger(DummyCSLabModel.class.getCanonicalName());
@@ -21,7 +23,13 @@ public class DummyCSLabModel extends Model {
     /**
      * Predictions for all kernels can be cached here for future use.
      */
-    private final Map<String, Double> predictionCache = new HashMap<>();
+    private final Map<ScheduledJobVertex, Double> predictionCache;
+
+    public DummyCSLabModel() {
+        logger.setLevel(Level.FINER);
+
+        this.predictionCache = new HashMap<>();
+    }
 
     // --------------------------------------------------------------------------------------------
 
@@ -32,11 +40,11 @@ public class DummyCSLabModel extends Model {
     public double predict(
             final String objective,
             final HwResource device,
-            final String sourceCode) {
-        if (!this.predictionCache.containsKey(sourceCode)) {
+            final ScheduledJobVertex scheduledJobVertex) {
+        if (!this.predictionCache.containsKey(scheduledJobVertex)) {
             // FIXME(ckatsak): CSLabFeatureExtractor must be run as a separate microservice, so we
             //                 may keep it commented it out for now to make HAIER easier to deploy.
-            logger.info("Feature extraction is happening here...");
+            logger.finest("Feature extraction is happening here...");
             //final List<Double> inputFeatures = CSLabFeatureExtractor.getInstance().extract(sourceCode);
             //logger.info("Features retrieved: " + inputFeatures);
 
@@ -45,10 +53,10 @@ public class DummyCSLabModel extends Model {
             //               "actual" code should calculate (or somehow obtain)
             //               the real prediction, and cache that instead.
             final Random randomPrediction = new Random(System.currentTimeMillis());
-            this.predictionCache.put(sourceCode, (double) randomPrediction.nextInt(10));
+            this.predictionCache.put(scheduledJobVertex, (double) randomPrediction.nextInt(10));
         }
 
-        return this.predictionCache.get(sourceCode);
+        return this.predictionCache.get(scheduledJobVertex);
     }
 
 /*

@@ -2,6 +2,7 @@ package gr.ntua.ece.cslab.e2datascheduler.graph;
 
 import gr.ntua.ece.cslab.e2datascheduler.beans.cluster.HwResource;
 import gr.ntua.ece.cslab.e2datascheduler.beans.graph.SerializableScheduledJobVertex;
+import gr.ntua.ece.cslab.e2datascheduler.ml.featurextraction.TornadoFeatureVector;
 
 import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.configuration.ConfigOptions;
@@ -96,13 +97,20 @@ public class HaierExecutionGraph {
     }
 
     /**
-     * Assign the given {@link HwResource} to the {@link ScheduledJobVertex} with the given (internal to HAIER) ID.
+     * Assign the given {@link HwResource} to the {@link ScheduledJobVertex} with the given (HAIER-internal) ID
+     * (i.e., {@code jobVertexIndex}).
      *
-     * @param jobVertexIndex The given (internal to HAIER) ID of the {@link ScheduledJobVertex}.
-     * @param assignedResource The given {@link HwResource}.
+     * @param jobVertexIndex The (HAIER-internal) ID to refer to the {@link ScheduledJobVertex}
+     * @param assignedResource The {@link HwResource}
+     * @param tornadoFeatures A {@link List} of {@link TornadoFeatureVector} (i.e., code features for the ML
+     *                        {@link gr.ntua.ece.cslab.e2datascheduler.ml.Model}) of the operators in this vertex
      */
-    public void assignResource(final int jobVertexIndex, final HwResource assignedResource) {
+    public void assignResourceAndFeatures(
+            final int jobVertexIndex,
+            final HwResource assignedResource,
+            final List<TornadoFeatureVector> tornadoFeatures) {
         this.scheduledJobVertices.get(jobVertexIndex).setAssignedResource(assignedResource);
+        this.scheduledJobVertices.get(jobVertexIndex).setTornadoFeatures(tornadoFeatures);
     }
 
 

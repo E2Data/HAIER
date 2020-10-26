@@ -1,4 +1,4 @@
-package gr.ntua.ece.cslab.e2datascheduler.ml.util;
+package gr.ntua.ece.cslab.e2datascheduler.ml.featurextraction;
 
 import gr.ntua.ece.cslab.e2datascheduler.beans.features.CSLabFeatureVector;
 
@@ -12,6 +12,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.List;
 import java.util.ResourceBundle;
+
 
 /**
  * Given the source code of an OpenCL kernel in the form of a {@link String}, this class transforms it into a vector of
@@ -46,6 +47,7 @@ import java.util.ResourceBundle;
  *      code is handed to the {@link gr.ntua.ece.cslab.e2datascheduler.ml.Model} (hence,
  *      {@link gr.ntua.ece.cslab.e2datascheduler.optimizer.Optimizer}s have no clue about features).
  */
+@Deprecated
 public class CSLabFeatureExtractor {
 
     public static final ResourceBundle resourceBundle = ResourceBundle.getBundle("config");
@@ -111,7 +113,5 @@ public class CSLabFeatureExtractor {
 
         return v;
     }
-
-
 
 }

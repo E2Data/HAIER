@@ -184,31 +184,26 @@ public class LayeredEvaluation extends TimeEvaluationAlgorithm {
     }
 
     /**
-     * Given an list of {@link ComputationalJobVertex} objects, this function returns the sum of the estimated
-     * execution durations, using {@link Model}'s predictions for each task.
+     * Given a {@link List} of {@link ComputationalJobVertex} objects, this function returns the
+     * sum of the estimated execution durations, using {@link Model}'s predictions for each task.
      *
-     * @param computationalJobVertices The given list of {@link ComputationalJobVertex}.
-     * @return The sum of the estimated execution time durations.
+     * @param computationalJobVertices The given {@link List} of {@link ComputationalJobVertex}
+     * @return The sum of the estimated execution time durations
      */
-    private double sumDurations(final HaierExecutionGraph haierExecutionGraph,
-                                final List<ComputationalJobVertex> computationalJobVertices) {
+    private double sumDurations(
+            final HaierExecutionGraph haierExecutionGraph,
+            final List<ComputationalJobVertex> computationalJobVertices) {
         double sum = 0.0d;
 
         for (ComputationalJobVertex computationalJobVertex : computationalJobVertices) {
-            // FIXME(ckatsak): Two versions: one using the CSLabFeatureExtractor and another one
-            //                 passing the source code to the Model, as per @kbitsak 's preference.
-
-            // FIXME(ckatsak): Temporarily using associated ScheduledJobVertex's sourceCode field.
             final ScheduledJobVertex scheduledJobVertex = haierExecutionGraph.getScheduledJobVertices().get(
                     this.computationalGraph.getIndexMapping().get(computationalJobVertex.getIndex())
             );
-
-            sum += this.mlModel.predict("execTime",
+            sum += this.mlModel.predict(
+                    "execTime",
                     computationalJobVertex.getAssignedResource(),
-                    scheduledJobVertex.getSourceCode());
-            //sum += this.mlModel.predict("execTime",
-            //        scheduledJobVertex.getAssignedResource(),
-            //        CSLabFeatureExtractor.extract(scheduledJobVertex.getSourceCode()));
+                    scheduledJobVertex
+            );
         }
 
         return sum;
