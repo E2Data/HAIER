@@ -1,6 +1,8 @@
 package gr.ntua.ece.cslab.e2datascheduler.ml.featurextraction;
 
 import gr.ntua.ece.cslab.e2datascheduler.beans.cluster.HwResource;
+import gr.ntua.ece.cslab.e2datascheduler.beans.features.TornadoFeatureVectorBean;
+import gr.ntua.ece.cslab.e2datascheduler.beans.features.TornadoFeatureVectorRootBean;
 import gr.ntua.ece.cslab.e2datascheduler.beans.features.TornadoVirtualDevice;
 import gr.ntua.ece.cslab.e2datascheduler.graph.HaierExecutionGraph;
 import gr.ntua.ece.cslab.e2datascheduler.ml.featurextraction.udf.HaierObjectInputStreamOfFlinkUDF;
@@ -15,10 +17,15 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.JobVertex;
 
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.util.ArrayList;
@@ -91,140 +98,6 @@ public class TornadoFeatureExtractor {
 
         this.deviceMapping = TornadoFeatureExtractor.createDeviceMapping(this.availableDevices, this.virtualDevices);
         this.featuresMap = new HashMap<>();
-    }
-
-
-    // --------------------------------------------------------------------------------------------
-
-
-    /**
-     * Parse the {@link List} of {@link TornadoVirtualDevice}s from the virtual devices JSON file
-     * configured via the {@code config.properties} file.
-     *
-     * @return The {@link List} of {@link TornadoVirtualDevice}s present in the cluster
-     * @throws IOException If the JSON deserialization fails for any reason, propagated from jackson
-     */
-    public static List<TornadoVirtualDevice> parseVirtualDevices(final String virtualDevicesFilePath)
-            throws IOException {
-        final File virtualDevicesFile = new File(virtualDevicesFilePath);
-        final ObjectMapper objectMapper = new ObjectMapper();
-        final TornadoVirtualDevice[] tornadoVirtualDevices = objectMapper.readValue(
-                virtualDevicesFile,
-                TornadoVirtualDevice[].class
-        );
-        return new ArrayList<>(Arrays.asList(tornadoVirtualDevices));
-    }
-    // NOTE(ckatsak): Quick & dirty deserialization test
-//    public static void main(String[] args) throws IOException {
-//        System.out.println(TornadoFeatureExtractor.parseVirtualDevices(TornadoFeatureExtractor.virtualDevicesFilePath));
-//    }
-
-    /**
-     * Create a mapping between devices in the cluster (as reported by YARN, i.e., in the form of
-     * {@link HwResource}s) and virtual devices used by TornadoVM for its "fake compilation"
-     * functionality (i.e., {@link TornadoVirtualDevice}s).
-     *
-     * @param availableDevices A {@link List} of {@link HwResource}s that represent the devices as reported by YARN
-     * @param virtualDevices   A {@link List} of {@link TornadoVirtualDevice} that represent the virtual devices fed
-     *                         into TornadoVM for its "fake compilation" utility
-     * @return A {@link Map} to match each one of the provided {@link HwResource}s to one of the provided
-     *         {@link TornadoVirtualDevice}s, indexed by the former
-     */
-    public static Map<HwResource, TornadoVirtualDevice> createDeviceMapping(
-            final List<HwResource> availableDevices,
-            final List<TornadoVirtualDevice> virtualDevices) {
-        // First, transform the device name of every TornadoVirtualDevice so as to resemble those
-        // reported by YARN and index all TornadoVirtualDevices by their transformed device name.
-        final Map<String, TornadoVirtualDevice> virtualDeviceTransformedNames = new HashMap<>();
-        for (TornadoVirtualDevice virtualDevice : virtualDevices) {
-            final String virtualDeviceType = virtualDevice.getDeviceType().toLowerCase();
-            // In the case of a GPU or an FPGA, prepend YARN's standard prefix
-            // and transform it in a way similar to what we did in YARN. E.g.:
-            //      "Tesla V100-SXM2-32GB" --> "yarn.io/gpu-teslav100sxm232gb",
-            //      "GeForce GTX 1060 6GB" --> "yarn.io/gpu-geforcegtx10606gb".
-            if (virtualDeviceType.endsWith("gpu")) {
-                virtualDeviceTransformedNames.put(
-                        "yarn.io/gpu-" + virtualDevice
-                                .getDeviceName()
-                                .replaceAll(" ", "")
-                                .replaceAll("-", "")
-                                .toLowerCase(),
-                        virtualDevice
-                );
-            } else if (virtualDeviceType.endsWith("fpga")) {
-                virtualDeviceTransformedNames.put(
-                        "yarn.io/fpga-" + virtualDevice
-                                .getDeviceName()
-                                .replaceAll(" ", "")
-                                .replaceAll("-", "")
-                                .toLowerCase(),
-                        virtualDevice
-                );
-            } else if (virtualDeviceType.endsWith("cpu")) {
-                // In the case of a CPU, prepend the number of cores to the standard (in YARN) "vcores" name.
-                virtualDeviceTransformedNames.put(
-                        virtualDevice.getAvailableProcessors() + "-vcores",
-                        virtualDevice
-                );
-            } else {
-                throw new IllegalStateException("TornadoVirtualDevice of unknown deviceType '" +
-                        virtualDeviceType + "': '" + virtualDevice + "'");
-            }
-        }
-
-        // Initialize a List for any HwResource that isn't matched with a TornadoVirtualDevice.
-        final List<HwResource> unmatchedHwResources = new ArrayList<>();
-        // Also initialize a Map for the result mapping to be returned.
-        final Map<HwResource, TornadoVirtualDevice> ret = new HashMap<>();
-        // Loop through every available HwResource...
-        for (HwResource hwResource : availableDevices) {
-            // ...reconstruct the name of a hypothetical matching TornadoVirtualDevice...
-            final String tornadoVirtualDeviceExpectedName =
-                    (hwResource.getName().equals("vcores"))
-                            ? hwResource.getValue() + "-vcores"
-                            : hwResource.getName();
-            // ...and check if it's already in the Map. If it is, then put it in the result mapping.
-            // Otherwise, put it in the List of the unmatched HwResources and log the upcoming failure.
-            if (virtualDeviceTransformedNames.containsKey(tornadoVirtualDeviceExpectedName)) {
-                ret.put(
-                        hwResource,
-                        virtualDeviceTransformedNames.get(tornadoVirtualDeviceExpectedName)
-                );
-                // Although multiple HwResources of the same model may exist and be available in the
-                // cluster, but they will be reported only once in the virtual devices JSON file.
-                // Therefore, eagerly removing TornadoVirtualDevices from the temp Map after
-                // they have been matched with a HwResource would probably be unsafe:
-//                virtualDeviceTransformedNames.remove(tornadoVirtualDeviceExpectedName);
-            } else {
-                logger.severe("HwResource '" + hwResource.getName() + "@" + hwResource.getHost() +
-                        "' seems to have no candidate TornadoVirtualDevice to be matched with!");
-                unmatchedHwResources.add(hwResource);
-            }
-        }
-        // If this List isn't empty by the end of the mapping, there will be unrecoverable
-        // errors, since there will be HwResources against whom TornadoVM will not be
-        // capable of "fake compiling" to retrieve the required code features.
-        if (0 != unmatchedHwResources.size()) {
-            String unmatchedHwResourcesMsg = "Unmatched HwResources:\n";
-            for (HwResource unmatchedHwResource : unmatchedHwResources) {
-                unmatchedHwResourcesMsg += "\t- " + unmatchedHwResource.toString() + "\n";
-            }
-            logger.severe(unmatchedHwResourcesMsg);
-            throw new IllegalStateException(
-                    "No HwResources can remain unmatched with a TornadoVirtualDevice; " + unmatchedHwResourcesMsg);
-        }
-        return ret;
-    }
-
-    private static List<TornadoFeatureVector> parseTornadoFeatureVectors() {
-        /*
-         * FIXME(ckatsak): Implementation
-         *  - Parse the file where TornadoVM spits its "fake compilation" results (i.e., the code features)
-         *  - Construct the appropriate TornadoFeatureVector objects from the parsed TornadoFeatureVectorBean objects
-         *   * May need to combine multiple TornadoFeatureVectorBean objects into a single TornadoFeatureVector for
-         *     each VirtualDevice that the "fake compilation" happens for
-         */
-        return null; // FIXME(ckatsak)
     }
 
 
@@ -437,6 +310,184 @@ public class TornadoFeatureExtractor {
     // --------------------------------------------------------------------------------------------
 
 
+    /**
+     * Parse the {@link List} of {@link TornadoVirtualDevice}s from the virtual devices JSON file
+     * configured via the {@code config.properties} file.
+     *
+     * @return The {@link List} of {@link TornadoVirtualDevice}s present in the cluster
+     * @throws IOException If the JSON deserialization fails for any reason, propagated from jackson
+     */
+    public static List<TornadoVirtualDevice> parseVirtualDevices(final String virtualDevicesFilePath)
+            throws IOException {
+        final File virtualDevicesFile = new File(virtualDevicesFilePath);
+        final ObjectMapper objectMapper = new ObjectMapper();
+        final TornadoVirtualDevice[] tornadoVirtualDevices = objectMapper.readValue(
+                virtualDevicesFile,
+                TornadoVirtualDevice[].class
+        );
+        return new ArrayList<>(Arrays.asList(tornadoVirtualDevices));
+    }
+    // NOTE(ckatsak): Quick & dirty deserialization test
+//    public static void main(String[] args) throws IOException {
+//        System.out.println(TornadoFeatureExtractor.parseVirtualDevices(TornadoFeatureExtractor.virtualDevicesFilePath));
+//    }
+
+    /**
+     * Create a mapping between devices in the cluster (as reported by YARN, i.e., in the form of
+     * {@link HwResource}s) and virtual devices used by TornadoVM for its "fake compilation"
+     * functionality (i.e., {@link TornadoVirtualDevice}s).
+     *
+     * @param availableDevices A {@link List} of {@link HwResource}s that represent the devices as reported by YARN
+     * @param virtualDevices   A {@link List} of {@link TornadoVirtualDevice} that represent the virtual devices fed
+     *                         into TornadoVM for its "fake compilation" utility
+     * @return A {@link Map} to match each one of the provided {@link HwResource}s to one of the provided
+     *         {@link TornadoVirtualDevice}s, indexed by the former
+     */
+    public static Map<HwResource, TornadoVirtualDevice> createDeviceMapping(
+            final List<HwResource> availableDevices,
+            final List<TornadoVirtualDevice> virtualDevices) {
+        // First, transform the device name of every TornadoVirtualDevice so as to resemble those
+        // reported by YARN and index all TornadoVirtualDevices by their transformed device name.
+        final Map<String, TornadoVirtualDevice> virtualDeviceTransformedNames = new HashMap<>();
+        for (TornadoVirtualDevice virtualDevice : virtualDevices) {
+            final String virtualDeviceType = virtualDevice.getDeviceType().toLowerCase();
+            // In the case of a GPU or an FPGA, prepend YARN's standard prefix
+            // and transform it in a way similar to what we did in YARN. E.g.:
+            //      "Tesla V100-SXM2-32GB" --> "yarn.io/gpu-teslav100sxm232gb",
+            //      "GeForce GTX 1060 6GB" --> "yarn.io/gpu-geforcegtx10606gb".
+            if (virtualDeviceType.endsWith("gpu")) {
+                virtualDeviceTransformedNames.put(
+                        "yarn.io/gpu-" + virtualDevice
+                                .getDeviceName()
+                                .replaceAll(" ", "")
+                                .replaceAll("-", "")
+                                .toLowerCase(),
+                        virtualDevice
+                );
+            } else if (virtualDeviceType.endsWith("fpga")) {
+                virtualDeviceTransformedNames.put(
+                        "yarn.io/fpga-" + virtualDevice
+                                .getDeviceName()
+                                .replaceAll(" ", "")
+                                .replaceAll("-", "")
+                                .toLowerCase(),
+                        virtualDevice
+                );
+            } else if (virtualDeviceType.endsWith("cpu")) {
+                // In the case of a CPU, prepend the number of cores to the standard (in YARN) "vcores" name.
+                virtualDeviceTransformedNames.put(
+                        virtualDevice.getAvailableProcessors() + "-vcores",
+                        virtualDevice
+                );
+            } else {
+                throw new IllegalStateException("TornadoVirtualDevice of unknown deviceType '" +
+                        virtualDeviceType + "': '" + virtualDevice + "'");
+            }
+        }
+
+        // Initialize a List for any HwResource that isn't matched with a TornadoVirtualDevice.
+        final List<HwResource> unmatchedHwResources = new ArrayList<>();
+        // Also initialize a Map for the result mapping to be returned.
+        final Map<HwResource, TornadoVirtualDevice> ret = new HashMap<>();
+        // Loop through every available HwResource...
+        for (HwResource hwResource : availableDevices) {
+            // ...reconstruct the name of a hypothetical matching TornadoVirtualDevice...
+            final String tornadoVirtualDeviceExpectedName =
+                    (hwResource.getName().equals("vcores"))
+                            ? hwResource.getValue() + "-vcores"
+                            : hwResource.getName();
+            // ...and check if it's already in the Map. If it is, then put it in the result mapping.
+            // Otherwise, put it in the List of the unmatched HwResources and log the upcoming failure.
+            if (virtualDeviceTransformedNames.containsKey(tornadoVirtualDeviceExpectedName)) {
+                ret.put(
+                        hwResource,
+                        virtualDeviceTransformedNames.get(tornadoVirtualDeviceExpectedName)
+                );
+                // Although multiple HwResources of the same model may exist and be available in the
+                // cluster, but they will be reported only once in the virtual devices JSON file.
+                // Therefore, eagerly removing TornadoVirtualDevices from the temp Map after
+                // they have been matched with a HwResource would probably be unsafe:
+//                virtualDeviceTransformedNames.remove(tornadoVirtualDeviceExpectedName);
+            } else {
+                logger.severe("HwResource '" + hwResource.getName() + "@" + hwResource.getHost() +
+                        "' seems to have no candidate TornadoVirtualDevice to be matched with!");
+                unmatchedHwResources.add(hwResource);
+            }
+        }
+        // If this List isn't empty by the end of the mapping, there will be unrecoverable
+        // errors, since there will be HwResources against whom TornadoVM will not be
+        // capable of "fake compiling" to retrieve the required code features.
+        if (0 != unmatchedHwResources.size()) {
+            String unmatchedHwResourcesMsg = "Unmatched HwResources:\n";
+            for (HwResource unmatchedHwResource : unmatchedHwResources) {
+                unmatchedHwResourcesMsg += "\t- " + unmatchedHwResource.toString() + "\n";
+            }
+            logger.severe(unmatchedHwResourcesMsg);
+            throw new IllegalStateException(
+                    "No HwResources can remain unmatched with a TornadoVirtualDevice; " + unmatchedHwResourcesMsg);
+        }
+        return ret;
+    }
+
+    /**
+     * <pre>
+     * FIXME(ckatsak): Implementation
+     *  - Parse the file where TornadoVM spits its "fake compilation" results (i.e., the code features)
+     *  - Construct the appropriate TornadoFeatureVector objects from the parsed TornadoFeatureVectorBean objects
+     *   * May need to combine multiple TornadoFeatureVectorBean objects into a single TornadoFeatureVector for each
+     *     VirtualDevice that the "fake compilation" happens for, although this might not be the best place to do that
+     * </pre>
+     *
+     * Parse the output of TornadoVM's "fake compilation" functionality that is stored in the file
+     * at the provided path {@code fileName}.
+     *
+     * @param filePath The file where TornadoVM's output is stored
+     * @return A {@link List} of the {@link TornadoFeatureVector}s that have been parsed from the file
+     * @throws FileNotFoundException If the provided file path is not present in the local filesystem
+     * @throws JsonParseException    If an error occurs during JSON deserialization, e.g., mainly due
+     *                               to nonconformity with the spec
+     * @throws IOException           If any other parsing or deserialization error occurs
+     */
+    public static List<TornadoFeatureVector> parseTornadoFeatureVectors(final String filePath)
+            throws FileNotFoundException, JsonParseException, IOException {
+        // Parse all TornadoFeatureVectorRootBeans scattered in the input file and collect them into a List.
+        final List<TornadoFeatureVectorRootBean> rootBeans = new ArrayList<>();
+        try (final FileInputStream fis = new FileInputStream(filePath)) {
+            final JsonFactory jsonFactory = new JsonFactory();
+            final JsonParser jsonParser = jsonFactory.createParser(fis);
+            jsonParser.setCodec(new ObjectMapper());
+            jsonParser.nextToken();
+            while (jsonParser.hasCurrentToken()) {
+                rootBeans.add(jsonParser.readValueAs(TornadoFeatureVectorRootBean.class));
+                jsonParser.nextToken();
+            }
+        } catch (final FileNotFoundException e) {
+            logger.log(Level.SEVERE, "Error opening file '" + filePath + "': " + e.getMessage(), e);
+            throw e;
+        } catch (final JsonParseException e) {
+            logger.log(Level.SEVERE, "Error during JSON parsing: " + e.getMessage(), e);
+            throw e;
+        } catch (final IOException e) {
+            logger.log(Level.SEVERE, e.getMessage(), e);
+            throw e;
+        }
+
+        // Using the TornadoFeatureVectorBean of every TornadoFeatureVectorRootBean, create
+        // the TornadoFeatureVectors and collect them into the List to be returned.
+        final List<TornadoFeatureVector> tornadoFeatureVectors = new ArrayList<>(rootBeans.size());
+        for (TornadoFeatureVectorRootBean rootBean : rootBeans) {
+            // There should always be one TornadoFeatureVectorBean per TornadoFeatureVectorRootBean, so...
+            for (TornadoFeatureVectorBean bean : rootBean.getTornadoFeatureVectorBeanMap().values()) {
+                tornadoFeatureVectors.add(new TornadoFeatureVector(bean));
+            }
+        }
+        return tornadoFeatureVectors;
+    }
+
+
+    // --------------------------------------------------------------------------------------------
+
+
     // NOTE(ckatsak): Quick & dirty test of static methods
     public static void main(String[] args) throws IOException {
         final List<HwResource> hwResources = new ArrayList<>(3);
@@ -468,6 +519,14 @@ public class TornadoFeatureExtractor {
         for (Map.Entry<HwResource, TornadoVirtualDevice> entry : ret.entrySet()) {
             System.out.println("\n" + entry.getKey() + "\t-->\t" + entry.getValue());
         }
+
+        System.out.println("================================ TornadoFeatureVectors ================================");
+        final List<TornadoFeatureVector> tornadoFeatureVectors =
+                TornadoFeatureExtractor.parseTornadoFeatureVectors(TornadoFeatureExtractor.featuresOutputFilePath);
+        for (TornadoFeatureVector tornadoFeatureVector : tornadoFeatureVectors) {
+            System.out.println(tornadoFeatureVector);
+        }
+        System.out.println("\nTotal number: " + tornadoFeatureVectors.size());
     }
 
 }

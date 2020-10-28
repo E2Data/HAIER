@@ -40,26 +40,37 @@ public class TornadoFeatureVector {
     // --------------------------------------------------------------------------------------------
 
 
-    @Override
-    public boolean equals(final Object otherObject) {
-        if (otherObject == this) {
-            return true;
-        }
-        if (null == otherObject || otherObject.getClass() != this.getClass()) {
-            return false;
-        }
+//    @Override
+//    public boolean equals(final Object otherObject) {
+//        if (otherObject == this) {
+//            return true;
+//        }
+//        if (null == otherObject || otherObject.getClass() != this.getClass()) {
+//            return false;
+//        }
+//
+//        final TornadoFeatureVector otherTornadoFeatureVector = (TornadoFeatureVector) otherObject;
+//        // FIXME(ckatsak): Return the result of the comparison of their fields, as in:
+//        //  https://www.techiedelight.com/how-to-use-equal-objects-as-key-hashmap-hashset-java/
+//        return Objects.equals(this, otherTornadoFeatureVector); // <-- FIXME(ckatsak): This is wrong
+//    }
+//
+//    @Override
+//    public int hashCode() {
+//        // FIXME(ckatsak): Hash all fields, as in:
+//        //  https://www.techiedelight.com/how-to-use-equal-objects-as-key-hashmap-hashset-java/
+//        return Objects.hash(this); // <-- FIXME(ckatsak): This is wrong
+//    }
 
-        final TornadoFeatureVector otherTornadoFeatureVector = (TornadoFeatureVector) otherObject;
-        // FIXME(ckatsak): Return the result of the comparison of their fields, as in:
-        //  https://www.techiedelight.com/how-to-use-equal-objects-as-key-hashmap-hashset-java/
-        return Objects.equals(this, otherTornadoFeatureVector); // <-- FIXME(ckatsak): This is wrong
-    }
+
+    // --------------------------------------------------------------------------------------------
+
 
     @Override
-    public int hashCode() {
-        // FIXME(ckatsak): Hash all fields, as in:
-        //  https://www.techiedelight.com/how-to-use-equal-objects-as-key-hashmap-hashset-java/
-        return Objects.hash(this); // <-- FIXME(ckatsak): This is wrong
+    public String toString() {
+        return "TornadoFeatureVector{" +
+                "bean=" + bean +
+                '}';
     }
 
 }
