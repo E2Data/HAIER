@@ -6,10 +6,10 @@ import gr.ntua.ece.cslab.e2datascheduler.beans.gui.CandidatePlan;
 import gr.ntua.ece.cslab.e2datascheduler.beans.optpolicy.OptimizationPolicy;
 import gr.ntua.ece.cslab.e2datascheduler.beans.profiling.TornadoProfilingInfoRoot;
 import gr.ntua.ece.cslab.e2datascheduler.graph.HaierExecutionGraph;
+import gr.ntua.ece.cslab.e2datascheduler.ml.featurextraction.udf.HaierObjectInputStreamOfFlinkUDF;
+import gr.ntua.ece.cslab.e2datascheduler.ml.featurextraction.udf.HaierUDFLoader;
 import gr.ntua.ece.cslab.e2datascheduler.optimizer.nsga.NSGAIIParameters;
 import gr.ntua.ece.cslab.e2datascheduler.util.HaierLogHandler;
-import gr.ntua.ece.cslab.e2datascheduler.util.udf.HaierObjectInputStreamOfFlinkUDF;
-import gr.ntua.ece.cslab.e2datascheduler.util.udf.HaierUDFLoader;
 import gr.ntua.ece.cslab.e2datascheduler.util.SelectionQueue;
 
 import org.apache.flink.api.common.functions.MapFunction;

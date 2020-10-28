@@ -2,6 +2,7 @@ package gr.ntua.ece.cslab.e2datascheduler.ml.featurextraction.cache;
 
 import gr.ntua.ece.cslab.e2datascheduler.beans.cluster.HwResource;
 import gr.ntua.ece.cslab.e2datascheduler.ml.featurextraction.FeatureCache;
+import gr.ntua.ece.cslab.e2datascheduler.ml.featurextraction.TornadoFeatureExtractor;
 import gr.ntua.ece.cslab.e2datascheduler.ml.featurextraction.TornadoFeatureVector;
 import gr.ntua.ece.cslab.e2datascheduler.util.HaierCacheException;
 
@@ -33,8 +34,6 @@ public class TornadoFeatureCache implements FeatureCache {
      * @param devices
      */
     public TornadoFeatureCache(final JobGraph jobGraph, final List<HwResource> devices) {
-        this.cacheEntryMap = new HashMap<>();
-
         /*
          * FIXME(ckatsak):
          *  - Initialize a new TornadoFeatureExtractor
@@ -42,6 +41,8 @@ public class TornadoFeatureCache implements FeatureCache {
          *  - Use it to "fake compile" every operator in every JobVertex in the provided JobGraph
          *  - Update the cache entries so that all subsequent queries for this JobGraph are satisfied
          */
+        this.cacheEntryMap = new TornadoFeatureExtractor(devices)
+                .extractFrom(jobGraph, this.getClass().getClassLoader());
     }
 
 
@@ -53,12 +54,12 @@ public class TornadoFeatureCache implements FeatureCache {
      *
      * @param jobVertex
      * @param device
-     * @param tornadoFeatureVector
+     * @param tornadoFeatureVectors
      */
-    private void addFeatureVector(
+    private void updateFeatureVectors(
             final JobVertex jobVertex,
             final HwResource device,
-            final TornadoFeatureVector tornadoFeatureVector) {
+            final List<TornadoFeatureVector> tornadoFeatureVectors) {
         if (null == this.cacheEntryMap.get(jobVertex)) {
             this.cacheEntryMap.put(jobVertex, new HashMap<>());
         }
@@ -66,8 +67,7 @@ public class TornadoFeatureCache implements FeatureCache {
         if (null == cacheEntry.get(device)) {
             cacheEntry.put(device, new ArrayList<>());
         }
-        final List<TornadoFeatureVector> cacheValue = cacheEntry.get(device);
-        cacheValue.add(tornadoFeatureVector);
+        cacheEntry.get(device).addAll(tornadoFeatureVectors);
     }
 
     /**

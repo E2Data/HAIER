@@ -1,4 +1,4 @@
-package gr.ntua.ece.cslab.e2datascheduler.util.udf;
+package gr.ntua.ece.cslab.e2datascheduler.ml.featurextraction.udf;
 
 import java.io.IOException;
 import java.io.InputStream;
