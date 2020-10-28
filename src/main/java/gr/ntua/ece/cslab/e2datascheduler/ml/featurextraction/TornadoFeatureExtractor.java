@@ -39,7 +39,8 @@ public class TornadoFeatureExtractor {
     private static final Logger logger = Logger.getLogger(TornadoFeatureExtractor.class.getCanonicalName());
 
     private static final ResourceBundle resourceBundle = ResourceBundle.getBundle("config");
-    private static final String virtualDevicesFilePath = resourceBundle.getString("tornado.virtual.devices.path");
+    private static final String virtualDevicesFilePath = resourceBundle.getString("tornado.device.desc.path");
+    private static final String featuresOutputFilePath = resourceBundle.getString("tornado.features.dump.path");
 
     /**
      * A {@link HaierUDFLoader} to allow dynamically loading arbitrary classes from users' JARs
