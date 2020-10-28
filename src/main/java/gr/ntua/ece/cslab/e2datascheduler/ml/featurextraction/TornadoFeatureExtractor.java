@@ -61,7 +61,7 @@ public class TornadoFeatureExtractor {
      */
     private final List<TornadoVirtualDevice> virtualDevices;
 
-    private final Map<TornadoVirtualDevice, HwResource> deviceMapping;
+    private final Map<HwResource, TornadoVirtualDevice> deviceMapping;
 
     /**
      * The {@link List} of {@link TornadoFeatureVector} for each available {@link HwResource} in
@@ -129,7 +129,7 @@ public class TornadoFeatureExtractor {
      * @return A {@link Map} to match each one of the provided {@link HwResource}s to one of the provided
      *         {@link TornadoVirtualDevice}s, indexed by the former
      */
-    public static Map<TornadoVirtualDevice, HwResource> createDeviceMapping(
+    public static Map<HwResource, TornadoVirtualDevice> createDeviceMapping(
             final List<HwResource> availableDevices,
             final List<TornadoVirtualDevice> virtualDevices) {
         // First, transform the device name of every TornadoVirtualDevice so as to resemble those
@@ -174,7 +174,7 @@ public class TornadoFeatureExtractor {
         // Initialize a List for any HwResource that isn't matched with a TornadoVirtualDevice.
         final List<HwResource> unmatchedHwResources = new ArrayList<>();
         // Also initialize a Map for the result mapping to be returned.
-        final Map<TornadoVirtualDevice, HwResource> ret = new HashMap<>();
+        final Map<HwResource, TornadoVirtualDevice> ret = new HashMap<>();
         // Loop through every available HwResource...
         for (HwResource hwResource : availableDevices) {
             // ...reconstruct the name of a hypothetical matching TornadoVirtualDevice...
@@ -186,8 +186,8 @@ public class TornadoFeatureExtractor {
             // Otherwise, put it in the List of the unmatched HwResources and log the upcoming failure.
             if (virtualDeviceTransformedNames.containsKey(tornadoVirtualDeviceExpectedName)) {
                 ret.put(
-                        virtualDeviceTransformedNames.get(tornadoVirtualDeviceExpectedName),
-                        hwResource
+                        hwResource,
+                        virtualDeviceTransformedNames.get(tornadoVirtualDeviceExpectedName)
                 );
                 // Although multiple HwResources of the same model may exist and be available in the
                 // cluster, but they will be reported only once in the virtual devices JSON file.
@@ -284,8 +284,8 @@ public class TornadoFeatureExtractor {
         // In all cases, initialize/allocate the Map entry for the current JobVertex.
         final Map<HwResource, List<TornadoFeatureVector>> vertexFeatureVectors = new HashMap<>();
         this.featuresMap.put(jobVertex, vertexFeatureVectors);
-        for (Map.Entry<TornadoVirtualDevice, HwResource> deviceMappingPair : this.deviceMapping.entrySet()) {
-            vertexFeatureVectors.put(deviceMappingPair.getValue(), new ArrayList<>(chainingNum + 1));
+        for (Map.Entry<HwResource, TornadoVirtualDevice> deviceMappingPair : this.deviceMapping.entrySet()) {
+            vertexFeatureVectors.put(deviceMappingPair.getKey(), new ArrayList<>(chainingNum + 1));
         }
 
         // If the JobVertex does *not* contain chained operators, then we should just look up the value of the
@@ -382,8 +382,8 @@ public class TornadoFeatureExtractor {
             logger.log(Level.SEVERE, "Error deserializing UDF: " + e.getMessage(), e);
 
             final Map<HwResource, TornadoFeatureVector> ret = new HashMap<>();
-            for (Map.Entry<TornadoVirtualDevice, HwResource> deviceMappingPair : this.deviceMapping.entrySet()) {
-                ret.put(deviceMappingPair.getValue(), TornadoFeatureVector.newDummy()); // FIXME(ckatsak): handle error
+            for (Map.Entry<HwResource, TornadoVirtualDevice> deviceMappingPair : this.deviceMapping.entrySet()) {
+                ret.put(deviceMappingPair.getKey(), TornadoFeatureVector.newDummy()); // FIXME(ckatsak): handle error
             }
             return ret;
         }
@@ -414,8 +414,8 @@ public class TornadoFeatureExtractor {
             logger.log(Level.SEVERE, "Error deserializing UDF: " + e.getMessage(), e);
 
             final Map<HwResource, TornadoFeatureVector> ret = new HashMap<>();
-            for (Map.Entry<TornadoVirtualDevice, HwResource> deviceMappingPair : this.deviceMapping.entrySet()) {
-                ret.put(deviceMappingPair.getValue(), TornadoFeatureVector.newDummy()); // FIXME(ckatsak): handle error
+            for (Map.Entry<HwResource, TornadoVirtualDevice> deviceMappingPair : this.deviceMapping.entrySet()) {
+                ret.put(deviceMappingPair.getKey(), TornadoFeatureVector.newDummy()); // FIXME(ckatsak): handle error
             }
             return ret;
         }
@@ -460,11 +460,11 @@ public class TornadoFeatureExtractor {
         r4.setValue(1);
         hwResources.add(r4);
 
-        final Map<TornadoVirtualDevice, HwResource> ret = TornadoFeatureExtractor.createDeviceMapping(
+        final Map<HwResource, TornadoVirtualDevice> ret = TornadoFeatureExtractor.createDeviceMapping(
                 hwResources,
                 TornadoFeatureExtractor.parseVirtualDevices(TornadoFeatureExtractor.virtualDevicesFilePath)
         );
-        for (Map.Entry<TornadoVirtualDevice, HwResource> entry : ret.entrySet()) {
+        for (Map.Entry<HwResource, TornadoVirtualDevice> entry : ret.entrySet()) {
             System.out.println("\n" + entry.getKey() + "\t-->\t" + entry.getValue());
         }
     }
