@@ -15,10 +15,14 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.JobVertex;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -69,12 +73,21 @@ public class TornadoFeatureExtractor {
     // --------------------------------------------------------------------------------------------
 
 
-    public TornadoFeatureExtractor(final List<HwResource> devices) {
+    public TornadoFeatureExtractor(final List<HwResource> devices) throws IOException {
         if (null == devices) {
             throw new IllegalArgumentException("devices cannot be null");
         }
         this.availableDevices = devices;
-        this.virtualDevices = TornadoFeatureExtractor.parseVirtualDevices();
+
+        try {
+            this.virtualDevices =
+                    TornadoFeatureExtractor.parseVirtualDevices(TornadoFeatureExtractor.virtualDevicesFilePath);
+        } catch (final IOException e) {
+            logger.log(Level.SEVERE, e.getMessage(), e);
+            throw new IOException("Failed to parse the virtual devices file '" +
+                    TornadoFeatureExtractor.virtualDevicesFilePath + "': " + e.getMessage());
+        }
+
         this.deviceMapping = TornadoFeatureExtractor.createDeviceMapping(this.availableDevices, this.virtualDevices);
         this.featuresMap = new HashMap<>();
     }
@@ -83,13 +96,27 @@ public class TornadoFeatureExtractor {
     // --------------------------------------------------------------------------------------------
 
 
-    private static List<TornadoVirtualDevice> parseVirtualDevices() {
-        /*
-         * FIXME(ckatsak): Implementation
-         *  - Parse the file at `TornadoFeatureExtractor.virtualDevicesFilePath` into `this.virtualDevices`
-         */
-        return null; // FIXME(ckatsak)
+    /**
+     * Parse the {@link List} of {@link TornadoVirtualDevice}s from the virtual devices JSON file
+     * configured via the {@code config.properties} file.
+     *
+     * @return The {@link List} of {@link TornadoVirtualDevice}s present in the cluster
+     * @throws IOException If the JSON deserialization fails for any reason, propagated from jackson
+     */
+    public static List<TornadoVirtualDevice> parseVirtualDevices(final String virtualDevicesFilePath)
+            throws IOException {
+        final File virtualDevicesFile = new File(virtualDevicesFilePath);
+        final ObjectMapper objectMapper = new ObjectMapper();
+        final TornadoVirtualDevice[] tornadoVirtualDevices = objectMapper.readValue(
+                virtualDevicesFile,
+                TornadoVirtualDevice[].class
+        );
+        return new ArrayList<>(Arrays.asList(tornadoVirtualDevices));
     }
+    // NOTE(ckatsak): Quick & dirty deserialization test
+//    public static void main(String[] args) throws IOException {
+//        System.out.println(TornadoFeatureExtractor.parseVirtualDevices(TornadoFeatureExtractor.virtualDevicesFilePath));
+//    }
 
     private static Map<TornadoVirtualDevice, HwResource> createDeviceMapping(
             final List<HwResource> availableDevices,

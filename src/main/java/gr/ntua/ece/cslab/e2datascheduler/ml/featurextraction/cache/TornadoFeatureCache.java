@@ -9,10 +9,13 @@ import gr.ntua.ece.cslab.e2datascheduler.util.HaierCacheException;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.JobVertex;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 
 /**
@@ -20,6 +23,8 @@ import java.util.Map;
  *                 reported by YARN for feature extraction (including this cache) to work!
  */
 public class TornadoFeatureCache implements FeatureCache {
+
+    private static final Logger logger = Logger.getLogger(TornadoFeatureCache.class.getCanonicalName());
 
     private final Map<JobVertex, Map<HwResource, List<TornadoFeatureVector>>> cacheEntryMap;
 
@@ -37,12 +42,19 @@ public class TornadoFeatureCache implements FeatureCache {
         /*
          * FIXME(ckatsak):
          *  - Initialize a new TornadoFeatureExtractor
-         *  - Make sure the provided HwResources are correctly mapped to TornadoVM virtual devices
-         *  - Use it to "fake compile" every operator in every JobVertex in the provided JobGraph
-         *  - Update the cache entries so that all subsequent queries for this JobGraph are satisfied
+         *   * Make sure the provided HwResources are correctly mapped to TornadoVM virtual devices
+         *   * Use it to "fake compile" every operator in every JobVertex in the provided JobGraph
+         *   * Update the cache entries so that all subsequent queries for this JobGraph are satisfied
          */
-        this.cacheEntryMap = new TornadoFeatureExtractor(devices)
-                .extractFrom(jobGraph, this.getClass().getClassLoader());
+        Map<JobVertex, Map<HwResource, List<TornadoFeatureVector>>> cacheEntryMapTemp;
+        try {
+            cacheEntryMapTemp = new TornadoFeatureExtractor(devices)
+                    .extractFrom(jobGraph, this.getClass().getClassLoader());
+        } catch (final IOException e) {
+            logger.log(Level.SEVERE, e.getMessage(), e);
+            cacheEntryMapTemp = new HashMap<>();
+        }
+        this.cacheEntryMap = cacheEntryMapTemp;
     }
 
 
