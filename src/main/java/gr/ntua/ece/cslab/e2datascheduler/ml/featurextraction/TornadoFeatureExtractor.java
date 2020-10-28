@@ -118,15 +118,101 @@ public class TornadoFeatureExtractor {
 //        System.out.println(TornadoFeatureExtractor.parseVirtualDevices(TornadoFeatureExtractor.virtualDevicesFilePath));
 //    }
 
-    private static Map<TornadoVirtualDevice, HwResource> createDeviceMapping(
+    /**
+     * Create a mapping between devices in the cluster (as reported by YARN, i.e., in the form of
+     * {@link HwResource}s) and virtual devices used by TornadoVM for its "fake compilation"
+     * functionality (i.e., {@link TornadoVirtualDevice}s).
+     *
+     * @param availableDevices A {@link List} of {@link HwResource}s that represent the devices as reported by YARN
+     * @param virtualDevices   A {@link List} of {@link TornadoVirtualDevice} that represent the virtual devices fed
+     *                         into TornadoVM for its "fake compilation" utility
+     * @return A {@link Map} to match each one of the provided {@link HwResource}s to one of the provided
+     *         {@link TornadoVirtualDevice}s, indexed by the former
+     */
+    public static Map<TornadoVirtualDevice, HwResource> createDeviceMapping(
             final List<HwResource> availableDevices,
             final List<TornadoVirtualDevice> virtualDevices) {
-        /*
-         * FIXME(ckatsak): Implementation
-         *  - Figure out how YARN transforms device names when they are retrieved through OpenCL API;
-         *  - Transform device names reported by TornadoVM the same way to create the mapping.
-         */
-        return null; // FIXME(ckatsak)
+        // First, transform the device name of every TornadoVirtualDevice so as to resemble those
+        // reported by YARN and index all TornadoVirtualDevices by their transformed device name.
+        final Map<String, TornadoVirtualDevice> virtualDeviceTransformedNames = new HashMap<>();
+        for (TornadoVirtualDevice virtualDevice : virtualDevices) {
+            final String virtualDeviceType = virtualDevice.getDeviceType().toLowerCase();
+            // In the case of a GPU or an FPGA, prepend YARN's standard prefix
+            // and transform it in a way similar to what we did in YARN. E.g.:
+            //      "Tesla V100-SXM2-32GB" --> "yarn.io/gpu-teslav100sxm232gb",
+            //      "GeForce GTX 1060 6GB" --> "yarn.io/gpu-geforcegtx10606gb".
+            if (virtualDeviceType.endsWith("gpu")) {
+                virtualDeviceTransformedNames.put(
+                        "yarn.io/gpu-" + virtualDevice
+                                .getDeviceName()
+                                .replaceAll(" ", "")
+                                .replaceAll("-", "")
+                                .toLowerCase(),
+                        virtualDevice
+                );
+            } else if (virtualDeviceType.endsWith("fpga")) {
+                virtualDeviceTransformedNames.put(
+                        "yarn.io/fpga-" + virtualDevice
+                                .getDeviceName()
+                                .replaceAll(" ", "")
+                                .replaceAll("-", "")
+                                .toLowerCase(),
+                        virtualDevice
+                );
+            } else if (virtualDeviceType.endsWith("cpu")) {
+                // In the case of a CPU, prepend the number of cores to the standard (in YARN) "vcores" name.
+                virtualDeviceTransformedNames.put(
+                        virtualDevice.getAvailableProcessors() + "-vcores",
+                        virtualDevice
+                );
+            } else {
+                throw new IllegalStateException("TornadoVirtualDevice of unknown deviceType '" +
+                        virtualDeviceType + "': '" + virtualDevice + "'");
+            }
+        }
+
+        // Initialize a List for any HwResource that isn't matched with a TornadoVirtualDevice.
+        final List<HwResource> unmatchedHwResources = new ArrayList<>();
+        // Also initialize a Map for the result mapping to be returned.
+        final Map<TornadoVirtualDevice, HwResource> ret = new HashMap<>();
+        // Loop through every available HwResource...
+        for (HwResource hwResource : availableDevices) {
+            // ...reconstruct the name of a hypothetical matching TornadoVirtualDevice...
+            final String tornadoVirtualDeviceExpectedName =
+                    (hwResource.getName().equals("vcores"))
+                            ? hwResource.getValue() + "-vcores"
+                            : hwResource.getName();
+            // ...and check if it's already in the Map. If it is, then put it in the result mapping.
+            // Otherwise, put it in the List of the unmatched HwResources and log the upcoming failure.
+            if (virtualDeviceTransformedNames.containsKey(tornadoVirtualDeviceExpectedName)) {
+                ret.put(
+                        virtualDeviceTransformedNames.get(tornadoVirtualDeviceExpectedName),
+                        hwResource
+                );
+                // Although multiple HwResources of the same model may exist and be available in the
+                // cluster, but they will be reported only once in the virtual devices JSON file.
+                // Therefore, eagerly removing TornadoVirtualDevices from the temp Map after
+                // they have been matched with a HwResource would probably be unsafe:
+//                virtualDeviceTransformedNames.remove(tornadoVirtualDeviceExpectedName);
+            } else {
+                logger.severe("HwResource '" + hwResource.getName() + "@" + hwResource.getHost() +
+                        "' seems to have no candidate TornadoVirtualDevice to be matched with!");
+                unmatchedHwResources.add(hwResource);
+            }
+        }
+        // If this List isn't empty by the end of the mapping, there will be unrecoverable
+        // errors, since there will be HwResources against whom TornadoVM will not be
+        // capable of "fake compiling" to retrieve the required code features.
+        if (0 != unmatchedHwResources.size()) {
+            String unmatchedHwResourcesMsg = "Unmatched HwResources:\n";
+            for (HwResource unmatchedHwResource : unmatchedHwResources) {
+                unmatchedHwResourcesMsg += "\t- " + unmatchedHwResource.toString() + "\n";
+            }
+            logger.severe(unmatchedHwResourcesMsg);
+            throw new IllegalStateException(
+                    "No HwResources can remain unmatched with a TornadoVirtualDevice; " + unmatchedHwResourcesMsg);
+        }
+        return ret;
     }
 
     private static List<TornadoFeatureVector> parseTornadoFeatureVectors() {
@@ -344,6 +430,43 @@ public class TornadoFeatureExtractor {
          *  - return the final Map
          */
         return null; // FIXME(ckatsak)
+    }
+
+
+    // --------------------------------------------------------------------------------------------
+
+
+    // NOTE(ckatsak): Quick & dirty test of static methods
+    public static void main(String[] args) throws IOException {
+        final List<HwResource> hwResources = new ArrayList<>(3);
+        final HwResource r1 = new HwResource();
+        r1.setName("yarn.io/gpu-teslav100sxm232gb");
+        r1.setHost("silver1.cslab.ece.ntua.gr");
+        r1.setValue(1);
+        hwResources.add(r1);
+        final HwResource r2 = new HwResource();
+        r2.setName("yarn.io/gpu-geforcegtx10606gb");
+        r2.setHost("silver1.cslab.ece.ntua.gr");
+        r2.setValue(1);
+        hwResources.add(r2);
+        final HwResource r3 = new HwResource();
+        r3.setName("vcores");
+        r3.setHost("silver1.cslab.ece.ntua.gr");
+        r3.setValue(40);
+        hwResources.add(r3);
+        final HwResource r4 = new HwResource();
+        r4.setName("yarn.io/gpu-teslav100sxm232gb");
+        r4.setHost("silver1.cslab.ece.ntua.gr");
+        r4.setValue(1);
+        hwResources.add(r4);
+
+        final Map<TornadoVirtualDevice, HwResource> ret = TornadoFeatureExtractor.createDeviceMapping(
+                hwResources,
+                TornadoFeatureExtractor.parseVirtualDevices(TornadoFeatureExtractor.virtualDevicesFilePath)
+        );
+        for (Map.Entry<TornadoVirtualDevice, HwResource> entry : ret.entrySet()) {
+            System.out.println("\n" + entry.getKey() + "\t-->\t" + entry.getValue());
+        }
     }
 
 }

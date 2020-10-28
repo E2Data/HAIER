@@ -1,5 +1,6 @@
 package gr.ntua.ece.cslab.e2datascheduler.beans.cluster;
 
+
 /**
  * Generic description of a hardware resource.
  */
@@ -55,6 +56,10 @@ public class HwResource {
 
     public int getValue() {
         return value;
+    }
+
+    public void setValue(final int value) {
+        this.value = value;
     }
 
     public String getHost() {
