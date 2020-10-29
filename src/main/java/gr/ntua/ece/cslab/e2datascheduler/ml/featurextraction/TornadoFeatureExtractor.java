@@ -69,7 +69,19 @@ public class TornadoFeatureExtractor {
      */
     private final List<TornadoVirtualDevice> virtualDevices;
 
+    /**
+     * Contains a mapping of each available {@link HwResource} in the cluster with one of the
+     * statically configured {@link TornadoVirtualDevice}s that are fed into TornadoVM for the
+     * "fake compilation".
+     */
     private final Map<HwResource, TornadoVirtualDevice> deviceMapping;
+
+    /**
+     * Maps the name of each {@link TornadoVirtualDevice} to a {@link List} of {@link HwResource}s
+     * that it may refer to, after removing all whitespaces from it (to match the output of
+     * TornadoVM's "fake compilation" functionality).
+     */
+    private final Map<String, List<HwResource>> reverseDeviceMapping;
 
     /**
      * The {@link List} of {@link TornadoFeatureVector} for each available {@link HwResource} in
@@ -97,6 +109,8 @@ public class TornadoFeatureExtractor {
         }
 
         this.deviceMapping = TornadoFeatureExtractor.createDeviceMapping(this.availableDevices, this.virtualDevices);
+        this.reverseDeviceMapping = TornadoFeatureExtractor.createReverseDeviceMapping(this.deviceMapping);
+
         this.featuresMap = new HashMap<>();
     }
 
@@ -115,10 +129,13 @@ public class TornadoFeatureExtractor {
      *         {@link JobGraph}, whose values are {@link Map}s keyed by the available {@link HwResource}s
      *         whose values are {@link List}s of {@link TornadoFeatureVector}s: one per operator
      *         in the {@link JobVertex}.
+     * @throws IOException If some of the included serialized UDFs cannot be read
+     * @throws ClassNotFoundException If some of the included serialized UDFs cannot be loaded
      */
     public synchronized Map<JobVertex, Map<HwResource, List<TornadoFeatureVector>>> extractFrom(
             final JobGraph jobGraph,
-            final ClassLoader classLoader) {
+            final ClassLoader classLoader
+    ) throws IOException, ClassNotFoundException {
         this.haierUDFLoader = new HaierUDFLoader(jobGraph, classLoader);
 
         for (JobVertex jobVertex : jobGraph.getVerticesSortedTopologicallyFromSources()) {
@@ -141,8 +158,11 @@ public class TornadoFeatureExtractor {
      * @return A {@link Map} where each entry's key is a {@link HwResource} that is available in
      *         the cluster and its value is a {@link List} of {@link TornadoFeatureVector}, one per
      *         operator in the {@link JobVertex} at hand.
+     * @throws IOException If some of the included serialized UDFs cannot be read
+     * @throws ClassNotFoundException If some of the included serialized UDFs cannot be loaded
      */
-    private Map<HwResource, List<TornadoFeatureVector>> fakeCompileJobVertex(final JobVertex jobVertex) {
+    private Map<HwResource, List<TornadoFeatureVector>> fakeCompileJobVertex(final JobVertex jobVertex)
+            throws IOException, ClassNotFoundException {
         logger.finest("Fake-compiling JobVertex '" + jobVertex.getID().toString() + "' (named '" +
                 jobVertex.getName() + "')...");
 
@@ -210,11 +230,14 @@ public class TornadoFeatureExtractor {
      *                             {@link JobVertex} that is currently being examined
      * @param driverClass          Flink's "driver.class" of the operator at hand
      * @param serializedUDF        The UDF of the operator at hand, serialized into a {@code byte[]}
+     * @throws IOException If the included serialized UDF cannot be read
+     * @throws ClassNotFoundException If the included serialized UDF cannot be loaded
      */
     private void fakeCompileOperator(
             final Map<HwResource, List<TornadoFeatureVector>> vertexFeatureVectors,
             final String driverClass,
-            final byte[] serializedUDF) {
+            final byte[] serializedUDF
+    ) throws IOException, ClassNotFoundException {
         if (null == driverClass) {
             logger.severe("Parameter 'driverClass' cannot be null");
             throw new IllegalArgumentException("Parameter 'driverClass' cannot be null");
@@ -242,7 +265,8 @@ public class TornadoFeatureExtractor {
         }
     }
 
-    private Map<HwResource, TornadoFeatureVector> fakeCompileMapOperator(final byte[] serializedUDF) {
+    private Map<HwResource, TornadoFeatureVector> fakeCompileMapOperator(final byte[] serializedUDF)
+            throws IOException, ClassNotFoundException {
         final UserCodeObjectWrapper userCodeObjectWrapper;
         final MapFunction udf;
         try (final ObjectInputStream objectInputStream =
@@ -254,12 +278,12 @@ public class TornadoFeatureExtractor {
             logger.finest("Successfully retrieved the user-defined MapFunction from the UserCodeObjectWrapper");
         } catch (final IOException | ClassNotFoundException e) {
             logger.log(Level.SEVERE, "Error deserializing UDF: " + e.getMessage(), e);
-
-            final Map<HwResource, TornadoFeatureVector> ret = new HashMap<>();
-            for (Map.Entry<HwResource, TornadoVirtualDevice> deviceMappingPair : this.deviceMapping.entrySet()) {
-                ret.put(deviceMappingPair.getKey(), TornadoFeatureVector.newDummy()); // FIXME(ckatsak): handle error
-            }
-            return ret;
+            throw e;
+//            final Map<HwResource, TornadoFeatureVector> ret = new HashMap<>();
+//            for (Map.Entry<HwResource, TornadoVirtualDevice> deviceMappingPair : this.deviceMapping.entrySet()) {
+//                ret.put(deviceMappingPair.getKey(), TornadoFeatureVector.newDummy()); // FIXME(ckatsak): handle error
+//            }
+//            return ret;
         }
 
         /*
@@ -271,10 +295,27 @@ public class TornadoFeatureExtractor {
          *  - split TornadoFeatureVectors per HwResource (taking into account this.deviceMapping)
          *  - return the final Map
          */
-        return null; // FIXME(ckatsak)
+
+        // Parse all TornadoFeatureVectors from the output on local filesystem...
+        List<TornadoFeatureVector> allTornadoFeatureVectors;
+        try {
+            allTornadoFeatureVectors = TornadoFeatureExtractor.parseTornadoFeatureVectors(
+                    TornadoFeatureExtractor.featuresOutputFilePath
+            );
+        } catch (final IOException e) {
+            logger.log(Level.SEVERE, e.getMessage(), e);
+            throw e;
+        }
+        // ...group them by the HwResource that each of them refers to...
+        final Map<HwResource, List<TornadoFeatureVector>> tornadoFeatureVectorsByHwResource =
+                this.groupFeaturesByHwResource(allTornadoFeatureVectors);
+        // ...and combine them to create the final Map for the operator
+        final Map<HwResource, TornadoFeatureVector> ret = this.combineFeatureVectors(tornadoFeatureVectorsByHwResource);
+        return ret;
     }
 
-    private Map<HwResource, TornadoFeatureVector> fakeCompileReduceOperator(final byte[] serializedUDF) {
+    private Map<HwResource, TornadoFeatureVector> fakeCompileReduceOperator(final byte[] serializedUDF)
+            throws IOException, ClassNotFoundException {
         final UserCodeObjectWrapper userCodeObjectWrapper;
         final ReduceFunction udf;
         try (final ObjectInputStream objectInputStream =
@@ -286,12 +327,12 @@ public class TornadoFeatureExtractor {
             logger.finest("Successfully retrieved the user-defined ReduceFunction from the UserCodeObjectWrapper");
         } catch (final IOException | ClassNotFoundException e) {
             logger.log(Level.SEVERE, "Error deserializing UDF: " + e.getMessage(), e);
-
-            final Map<HwResource, TornadoFeatureVector> ret = new HashMap<>();
-            for (Map.Entry<HwResource, TornadoVirtualDevice> deviceMappingPair : this.deviceMapping.entrySet()) {
-                ret.put(deviceMappingPair.getKey(), TornadoFeatureVector.newDummy()); // FIXME(ckatsak): handle error
-            }
-            return ret;
+            throw e;
+//            final Map<HwResource, TornadoFeatureVector> ret = new HashMap<>();
+//            for (Map.Entry<HwResource, TornadoVirtualDevice> deviceMappingPair : this.deviceMapping.entrySet()) {
+//                ret.put(deviceMappingPair.getKey(), TornadoFeatureVector.newDummy()); // FIXME(ckatsak): handle error
+//            }
+//            return ret;
         }
 
         /*
@@ -303,6 +344,54 @@ public class TornadoFeatureExtractor {
          *  - split TornadoFeatureVectors per HwResource (taking into account this.deviceMapping)
          *  - return the final Map
          */
+
+        // Parse all TornadoFeatureVectors from the output on local filesystem...
+        List<TornadoFeatureVector> allTornadoFeatureVectors;
+        try {
+            allTornadoFeatureVectors = TornadoFeatureExtractor.parseTornadoFeatureVectors(
+                    TornadoFeatureExtractor.featuresOutputFilePath
+            );
+        } catch (final IOException e) {
+            logger.log(Level.SEVERE, e.getMessage(), e);
+            throw e;
+        }
+        // ...group them by the HwResource that each of them refers to...
+        final Map<HwResource, List<TornadoFeatureVector>> tornadoFeatureVectorsByHwResource =
+                this.groupFeaturesByHwResource(allTornadoFeatureVectors);
+        // ...and combine them to create the final Map for the operator
+        final Map<HwResource, TornadoFeatureVector> ret = this.combineFeatureVectors(tornadoFeatureVectorsByHwResource);
+        return ret;
+    }
+
+
+    // --------------------------------------------------------------------------------------------
+
+
+    private Map<HwResource, List<TornadoFeatureVector>> groupFeaturesByHwResource(
+            final List<TornadoFeatureVector> tornadoFeatureVectors
+    ) {
+        final Map<HwResource, List<TornadoFeatureVector>> ret = new HashMap<>();
+
+        for (TornadoFeatureVector tornadoFeatureVector : tornadoFeatureVectors) {
+            final String virtualDeviceName = tornadoFeatureVector.getBean().getDevice();
+            for (HwResource hwResource : this.reverseDeviceMapping.get(virtualDeviceName)) {
+                if (!ret.containsKey(hwResource)) {
+                    ret.put(hwResource, new ArrayList<>());
+                }
+                ret.get(hwResource).add(tornadoFeatureVector);
+            }
+        }
+
+        return ret;
+    }
+
+    /*
+     * FIXME(ckatsak): Implementation
+     *  - Probably add the contained features field-by-field to produce a single one (?)
+     */
+    private Map<HwResource, TornadoFeatureVector> combineFeatureVectors(
+            final Map<HwResource, List<TornadoFeatureVector>> vectorsByHwResource
+    ) {
         return null; // FIXME(ckatsak)
     }
 
@@ -430,6 +519,29 @@ public class TornadoFeatureExtractor {
     }
 
     /**
+     * Based on the provided {@link Map} between {@link HwResource}s and {@link TornadoVirtualDevice}s,
+     * create a mapping between the name of each {@link TornadoVirtualDevice} (after removing any whitespace
+     * character in it, to match it with the output of TornadoVM's "fake compilation") and any number of the
+     * given {@link HwResource}s that may be referred by it.
+     *
+     * @param deviceMapping The {@link Map} between {@link HwResource}s and {@link TornadoVirtualDevice}s
+     * @return A {@link Map} where each entry maps a {@link TornadoVirtualDevice} name (whitespace removed,
+     *         as a {@link String}) and a {@link List} of {@link HwResource}s that may be referred by it
+     */
+    public static Map<String, List<HwResource>> createReverseDeviceMapping(
+            final Map<HwResource, TornadoVirtualDevice> deviceMapping) {
+        final Map<String, List<HwResource>> ret = new HashMap<>();
+        for (Map.Entry<HwResource, TornadoVirtualDevice> deviceMappingPair : deviceMapping.entrySet()) {
+            final String name = deviceMappingPair.getValue().getDeviceName().replaceAll(" ", "");
+            if (!ret.containsKey(name)) {
+                ret.put(name, new ArrayList<>());
+            }
+            ret.get(name).add(deviceMappingPair.getKey());
+        }
+        return ret;
+    }
+
+    /**
      * <pre>
      * FIXME(ckatsak): Implementation
      *  - Parse the file where TornadoVM spits its "fake compilation" results (i.e., the code features)
@@ -527,6 +639,9 @@ public class TornadoFeatureExtractor {
             System.out.println(tornadoFeatureVector);
         }
         System.out.println("\nTotal number: " + tornadoFeatureVectors.size());
+
+        System.out.println("================================ Reverse Device Mapping ===============================");
+        System.out.println(TornadoFeatureExtractor.createReverseDeviceMapping(ret));
     }
 
 }
