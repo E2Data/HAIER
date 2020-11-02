@@ -385,14 +385,24 @@ public class TornadoFeatureExtractor {
         return ret;
     }
 
-    /*
-     * FIXME(ckatsak): Implementation
-     *  - Probably add the contained features field-by-field to produce a single one (?)
+    /**
+     * Combine the {@link TornadoFeatureVector}s in the {@link List} for each {@link HwResource}.
+     *
+     * For now, it is a single field-by-field addition of the given {@link TornadoFeatureVector}s.
+     *
+     * @param vectorsByHwResource A {@link Map} that contains each {@link HwResource} and its associated
+     *                            {@link List} of {@link TornadoFeatureVector}s
+     * @return A {@link Map} that contains the same {@link HwResource}s as the one passed as input, but
+     *         mapped to a single {@link TornadoFeatureVector}: the combination of those in the input.
      */
     private Map<HwResource, TornadoFeatureVector> combineFeatureVectors(
             final Map<HwResource, List<TornadoFeatureVector>> vectorsByHwResource
     ) {
-        return null; // FIXME(ckatsak)
+        final Map<HwResource, TornadoFeatureVector> ret = new HashMap<>();
+        for (Map.Entry<HwResource, List<TornadoFeatureVector>> entry : vectorsByHwResource.entrySet()) {
+            ret.put(entry.getKey(), new TornadoFeatureVector(entry.getValue()));
+        }
+        return ret;
     }
 
 
