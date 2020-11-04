@@ -6,21 +6,31 @@ import gr.ntua.ece.cslab.e2datascheduler.beans.gui.CandidatePlan;
 import gr.ntua.ece.cslab.e2datascheduler.beans.optpolicy.OptimizationPolicy;
 import gr.ntua.ece.cslab.e2datascheduler.beans.profiling.TornadoProfilingInfoRoot;
 import gr.ntua.ece.cslab.e2datascheduler.graph.HaierExecutionGraph;
+import gr.ntua.ece.cslab.e2datascheduler.ml.featurextraction.udf.DummyEnvironment;
 import gr.ntua.ece.cslab.e2datascheduler.ml.featurextraction.udf.HaierObjectInputStreamOfFlinkUDF;
 import gr.ntua.ece.cslab.e2datascheduler.ml.featurextraction.udf.HaierUDFLoader;
 import gr.ntua.ece.cslab.e2datascheduler.optimizer.nsga.NSGAIIParameters;
 import gr.ntua.ece.cslab.e2datascheduler.util.HaierLogHandler;
 import gr.ntua.ece.cslab.e2datascheduler.util.SelectionQueue;
 
+import org.apache.flink.api.common.functions.Function;
 import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.operators.util.UserCodeObjectWrapper;
 import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.configuration.ConfigOptions;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.runtime.blob.PermanentBlobKey;
+import org.apache.flink.runtime.execution.Environment;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.JobVertex;
+import org.apache.flink.runtime.jobgraph.tasks.AbstractInvokable;
 import org.apache.flink.runtime.jobmanager.scheduler.CoLocationGroup;
 import org.apache.flink.runtime.jobmanager.scheduler.SlotSharingGroup;
+import org.apache.flink.runtime.operators.BatchTask;
+import org.apache.flink.runtime.operators.Driver;
+import org.apache.flink.runtime.operators.chaining.ChainedDriver;
+import org.apache.flink.runtime.operators.util.TaskConfig;
+import org.apache.flink.util.InstantiationUtil;
 
 import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
 import org.glassfish.jersey.media.multipart.FormDataParam;
@@ -47,6 +57,7 @@ import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
@@ -55,6 +66,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.ResourceBundle;
 import java.util.concurrent.BlockingQueue;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 
@@ -418,6 +430,8 @@ public class SchedulerService extends AbstractE2DataService {
                 }
             }
 
+            //this.udfFromJobGraph(vertex);
+
             // ====================================================================================
             //   ^^^   User's lambda deserialization   ^^^
             // ====================================================================================
@@ -473,6 +487,61 @@ public class SchedulerService extends AbstractE2DataService {
         // ========================================================================================
         //   ^^^   User's JAR inspection/manipulation   ^^^
         // ========================================================================================
+    }
+
+    /*
+     * FIXME(ckatsak): UDF extraction from JobGraph; only temporarily here
+     */
+    private void udfFromJobGraph(final JobVertex vertex) {
+        final ClassLoader classLoader = getClass().getClassLoader();
+        final Configuration taskConf = vertex.getConfiguration();
+        final Environment environment = new DummyEnvironment(taskConf, classLoader);
+        final Class<? extends AbstractInvokable> invokableClass = vertex.getInvokableClass(classLoader);
+        final TaskConfig taskConfig = new TaskConfig(taskConf);
+
+        try {
+            final Constructor<? extends AbstractInvokable> statelessCtor = invokableClass.getConstructor(Environment.class);
+            final AbstractInvokable invokable = statelessCtor.newInstance(environment);
+
+            // Get non-chained Function
+            if (taskConfig.getNumberOfChainedStubs() == 0 && taskConfig.hasStubWrapper()) {
+                final Class<? extends Driver<Function, Object>> driverClass = taskConfig.getDriver();
+                final Driver driver = InstantiationUtil.instantiate(driverClass, Driver.class);
+
+                if (invokable instanceof BatchTask) {
+                    driver.setup((BatchTask) invokable);
+                }
+
+                final Class stubType = driver.getStubType();
+                final Function stub =
+                        (Function) taskConfig.getStubWrapper(classLoader).getUserCodeObject(stubType, classLoader);
+                final String stubStr = stub.toString();
+                logger.finest(stubStr);
+            }
+
+            // Get chained Function(s)
+            // Note: currently getting a NullPointerException in "ct.setup()" due to incomplete shortcuts
+            int numChained = taskConfig.getNumberOfChainedStubs();
+            for (int i = 0; i < numChained; ++i) {
+                final ChainedDriver<?, ?> ct;
+                try {
+                    final Class<? extends ChainedDriver<?, ?>> ctc = taskConfig.getChainedTask(i);
+                    ct = ctc.newInstance();
+                    final String taskName = taskConfig.getChainedTaskName(i);
+                    logger.finest(taskName);
+
+                    ct.setup(taskConfig, "DummyTask", null,
+                            invokable, classLoader, environment.getExecutionConfig(), new HashMap());
+                    final Function stub = ct.getStub();
+                    final String stubStr = stub.toString();
+                    logger.finest(stubStr);
+                } catch (final Exception ex) {
+                    throw new RuntimeException("Could not instantiate chained task driver.", ex);
+                }
+            }
+        } catch (final Exception e) {
+            logger.log(Level.SEVERE, e.getMessage(), e);
+        }
     }
 
 }
