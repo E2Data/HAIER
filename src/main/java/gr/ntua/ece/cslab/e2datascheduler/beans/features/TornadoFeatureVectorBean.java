@@ -8,27 +8,29 @@ public class TornadoFeatureVectorBean {
     private String device;
     private int globalMemoryLoads;
     private int globalMemoryStores;
-    private int constantMemoryLoads;
-    private int constantMemoryStores;
     private int localMemoryLoads;
     private int localMemoryStores;
+    private int constantMemoryLoads;
+    private int constantMemoryStores;
     private int privateMemoryLoads;
     private int privateMemoryStores;
     private int totalLoops;
     private int parallelLoops;
     private int ifStatements;
-    private int integerComparison;
-    private int floatComparison;
     private int switchStatements;
     private int switchCases;
+    private int castOperations;
     private int vectorOperations;
     private int totalIntegerOperations;
     private int totalFloatOperations;
     private int singlePrecisionFloatOperations;
     private int doublePrecisionFloatOperations;
-    private int castOperations;
+    private int binaryOperations;
+    private int booleanOperations;
     private int floatMathFunctions;
     private int integerMathFunctions;
+    private int integerComparison;
+    private int floatComparison;
 
     @JsonProperty("Device ID")
     public String getDeviceID() {
@@ -70,26 +72,6 @@ public class TornadoFeatureVectorBean {
         this.globalMemoryStores = globalMemoryStores;
     }
 
-    @JsonProperty("Constant Memory Loads")
-    public int getConstantMemoryLoads() {
-        return this.constantMemoryLoads;
-    }
-
-    @JsonProperty("Constant Memory Loads")
-    public void setConstantMemoryLoads(final int constantMemoryLoads) {
-        this.constantMemoryLoads = constantMemoryLoads;
-    }
-
-    @JsonProperty("Constant Memory Stores")
-    public int getConstantMemoryStores() {
-        return this.constantMemoryStores;
-    }
-
-    @JsonProperty("Constant Memory Stores")
-    public void setConstantMemoryStores(final int constantMemoryStores) {
-        this.constantMemoryStores = constantMemoryStores;
-    }
-
     @JsonProperty("Local Memory Loads")
     public int getLocalMemoryLoads() {
         return this.localMemoryLoads;
@@ -108,6 +90,26 @@ public class TornadoFeatureVectorBean {
     @JsonProperty("Local Memory Stores")
     public void setLocalMemoryStores(final int localMemoryStores) {
         this.localMemoryStores = localMemoryStores;
+    }
+
+    @JsonProperty("Constant Memory Loads")
+    public int getConstantMemoryLoads() {
+        return this.constantMemoryLoads;
+    }
+
+    @JsonProperty("Constant Memory Loads")
+    public void setConstantMemoryLoads(final int constantMemoryLoads) {
+        this.constantMemoryLoads = constantMemoryLoads;
+    }
+
+    @JsonProperty("Constant Memory Stores")
+    public int getConstantMemoryStores() {
+        return this.constantMemoryStores;
+    }
+
+    @JsonProperty("Constant Memory Stores")
+    public void setConstantMemoryStores(final int constantMemoryStores) {
+        this.constantMemoryStores = constantMemoryStores;
     }
 
     @JsonProperty("Private Memory Loads")
@@ -160,26 +162,6 @@ public class TornadoFeatureVectorBean {
         this.ifStatements = ifStatements;
     }
 
-    @JsonProperty("Integer Comparison")
-    public int getIntegerComparison() {
-        return this.integerComparison;
-    }
-
-    @JsonProperty("Integer Comparison")
-    public void setIntegerComparison(final int integerComparison) {
-        this.integerComparison = integerComparison;
-    }
-
-    @JsonProperty("Float Comparison")
-    public int getFloatComparison() {
-        return this.floatComparison;
-    }
-
-    @JsonProperty("Float Comparison")
-    public void setFloatComparison(final int floatComparison) {
-        this.floatComparison = floatComparison;
-    }
-
     @JsonProperty("Switch Statements")
     public int getSwitchStatements() {
         return this.switchStatements;
@@ -198,6 +180,16 @@ public class TornadoFeatureVectorBean {
     @JsonProperty("Switch Cases")
     public void setSwitchCases(final int switchCases) {
         this.switchCases = switchCases;
+    }
+
+    @JsonProperty("Cast Operations")
+    public int getCastOperations() {
+        return this.castOperations;
+    }
+
+    @JsonProperty("Cast Operations")
+    public void setCastOperations(final int castOperations) {
+        this.castOperations = castOperations;
     }
 
     @JsonProperty("Vector Operations")
@@ -250,14 +242,24 @@ public class TornadoFeatureVectorBean {
         this.doublePrecisionFloatOperations = doublePrecisionFloatOperations;
     }
 
-    @JsonProperty("Cast Operations")
-    public int getCastOperations() {
-        return this.castOperations;
+    @JsonProperty("Binary Operations")
+    public int getBinaryOperations() {
+        return this.binaryOperations;
     }
 
-    @JsonProperty("Cast Operations")
-    public void setCastOperations(final int castOperations) {
-        this.castOperations = castOperations;
+    @JsonProperty("Binary Operations")
+    public void setBinaryOperations(final int binaryOperations) {
+        this.binaryOperations = binaryOperations;
+    }
+
+    @JsonProperty("Boolean Operations")
+    public int getBooleanOperations() {
+        return this.booleanOperations;
+    }
+
+    @JsonProperty("Boolean Operations")
+    public void setBooleanOperations(final int booleanOperations) {
+        this.booleanOperations = booleanOperations;
     }
 
     @JsonProperty("Float Math Functions")
@@ -280,6 +282,26 @@ public class TornadoFeatureVectorBean {
         this.integerMathFunctions = integerMathFunctions;
     }
 
+    @JsonProperty("Integer Comparison")
+    public int getIntegerComparison() {
+        return this.integerComparison;
+    }
+
+    @JsonProperty("Integer Comparison")
+    public void setIntegerComparison(final int integerComparison) {
+        this.integerComparison = integerComparison;
+    }
+
+    @JsonProperty("Float Comparison")
+    public int getFloatComparison() {
+        return this.floatComparison;
+    }
+
+    @JsonProperty("Float Comparison")
+    public void setFloatComparison(final int floatComparison) {
+        this.floatComparison = floatComparison;
+    }
+
 
     // --------------------------------------------------------------------------------------------
 
@@ -289,30 +311,31 @@ public class TornadoFeatureVectorBean {
         return "TornadoFeatureVectorBean{" +
                 "deviceID='" + deviceID + '\'' +
                 ", device='" + device + '\'' +
-                ", globalMemoryLoads='" + globalMemoryLoads + '\'' +
-                ", globalMemoryStores='" + globalMemoryStores + '\'' +
-                ", constantMemoryLoads='" + constantMemoryLoads + '\'' +
-                ", constantMemoryStores='" + constantMemoryStores + '\'' +
-                ", localMemoryLoads='" + localMemoryLoads + '\'' +
-                ", localMemoryStores='" + localMemoryStores + '\'' +
-                ", privateMemoryLoads='" + privateMemoryLoads + '\'' +
-                ", privateMemoryStores='" + privateMemoryStores + '\'' +
-                ", totalLoops='" + totalLoops + '\'' +
-                ", parallelLoops='" + parallelLoops + '\'' +
-                ", ifStatements='" + ifStatements + '\'' +
-                ", integerComparison='" + integerComparison + '\'' +
-                ", floatComparison='" + floatComparison + '\'' +
-                ", switchStatements='" + switchStatements + '\'' +
-                ", switchCases='" + switchCases + '\'' +
-                ", vectorOperations='" + vectorOperations + '\'' +
-                ", totalIntegerOperations='" + totalIntegerOperations + '\'' +
-                ", totalFloatOperations='" + totalFloatOperations + '\'' +
-                ", singlePrecisionFloatOperations='" + singlePrecisionFloatOperations + '\'' +
-                ", doublePrecisionFloatOperations='" + doublePrecisionFloatOperations + '\'' +
-                ", castOperations='" + castOperations + '\'' +
-                ", floatMathFunctions='" + floatMathFunctions + '\'' +
-                ", integerMathFunctions='" + integerMathFunctions + '\'' +
+                ", globalMemoryLoads=" + globalMemoryLoads +
+                ", globalMemoryStores=" + globalMemoryStores +
+                ", localMemoryLoads=" + localMemoryLoads +
+                ", localMemoryStores=" + localMemoryStores +
+                ", constantMemoryLoads=" + constantMemoryLoads +
+                ", constantMemoryStores=" + constantMemoryStores +
+                ", privateMemoryLoads=" + privateMemoryLoads +
+                ", privateMemoryStores=" + privateMemoryStores +
+                ", totalLoops=" + totalLoops +
+                ", parallelLoops=" + parallelLoops +
+                ", ifStatements=" + ifStatements +
+                ", switchStatements=" + switchStatements +
+                ", switchCases=" + switchCases +
+                ", castOperations=" + castOperations +
+                ", vectorOperations=" + vectorOperations +
+                ", totalIntegerOperations=" + totalIntegerOperations +
+                ", totalFloatOperations=" + totalFloatOperations +
+                ", singlePrecisionFloatOperations=" + singlePrecisionFloatOperations +
+                ", doublePrecisionFloatOperations=" + doublePrecisionFloatOperations +
+                ", binaryOperations=" + binaryOperations +
+                ", booleanOperations=" + booleanOperations +
+                ", floatMathFunctions=" + floatMathFunctions +
+                ", integerMathFunctions=" + integerMathFunctions +
+                ", integerComparison=" + integerComparison +
+                ", floatComparison=" + floatComparison +
                 '}';
     }
-
 }
