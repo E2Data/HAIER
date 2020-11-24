@@ -21,8 +21,14 @@ public class TornadoProfilingInfoTaskSchedule {
     @JsonProperty("TOTAL_TASK_SCHEDULE_TIME")
     private String totalTaskScheduleTime;
 
+    @JsonProperty("COPY_IN_TIME")
+    private String copyInTime;
+
     @JsonProperty("COPY_OUT_TIME")
     private String copyOutTime;
+
+    @JsonProperty("DISPATCH_TIME")
+    private String dispatchTime;
 
     @JsonProperty("TOTAL_DRIVER_COMPILE_TIME")
     private String totalDriverCompileTime;
@@ -73,6 +79,16 @@ public class TornadoProfilingInfoTaskSchedule {
         this.totalTaskScheduleTime = totalTaskScheduleTime;
     }
 
+    @JsonProperty("COPY_IN_TIME")
+    public String getCopyInTime() {
+        return this.copyInTime;
+    }
+
+    @JsonProperty("COPY_IN_TIME")
+    public void setCopyInTime(final String copyInTime) {
+        this.copyInTime = copyInTime;
+    }
+
     @JsonProperty("COPY_OUT_TIME")
     public String getCopyOutTime() {
         return this.copyOutTime;
@@ -81,6 +97,16 @@ public class TornadoProfilingInfoTaskSchedule {
     @JsonProperty("COPY_OUT_TIME")
     public void setCopyOutTime(final String copyOutTime) {
         this.copyOutTime = copyOutTime;
+    }
+
+    @JsonProperty("DISPATCH_TIME")
+    public String getDispatchTime() {
+        return this.dispatchTime;
+    }
+
+    @JsonProperty("DISPATCH_TIME")
+    public void setDispatchTime(final String dispatchTime) {
+        this.dispatchTime = dispatchTime;
     }
 
     @JsonProperty("TOTAL_DRIVER_COMPILE_TIME")
@@ -109,7 +135,9 @@ public class TornadoProfilingInfoTaskSchedule {
                 ", totalKernelTime='" + totalKernelTime + '\'' +
                 ", totalGraalCompileTime='" + totalGraalCompileTime + '\'' +
                 ", totalTaskScheduleTime='" + totalTaskScheduleTime + '\'' +
+                ", copyInTime='" + copyInTime + '\'' +
                 ", copyOutTime='" + copyOutTime + '\'' +
+                ", dispatchTime='" + dispatchTime + '\'' +
                 ", totalDriverCompileTime='" + totalDriverCompileTime + '\'' +
                 ", task=" + task +
                 '}';

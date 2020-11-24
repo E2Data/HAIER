@@ -5,6 +5,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class TornadoProfilingInfoTask {
 
+    @JsonProperty("METHOD")
+    private String method;
+
     @JsonProperty("DEVICE_ID")
     private String deviceID;
 
@@ -13,6 +16,9 @@ public class TornadoProfilingInfoTask {
 
     @JsonProperty("TASK_COPY_OUT_SIZE_BYTES")
     private String taskCopyOutSizeBytes;
+
+    @JsonProperty("TASK_COPY_IN_SIZE_BYTES")
+    private String taskCopyInSizeBytes;
 
     @JsonProperty("TASK_KERNEL_TIME")
     private String taskKernelTime;
@@ -26,6 +32,16 @@ public class TornadoProfilingInfoTask {
 
     public TornadoProfilingInfoTask(){}
 
+
+    @JsonProperty("METHOD")
+    public String getMethod() {
+        return this.method;
+    }
+
+    @JsonProperty("METHOD")
+    public void setMethod(final String method) {
+        this.method = method;
+    }
 
     @JsonProperty("DEVICE_ID")
     public String getDeviceID() {
@@ -55,6 +71,16 @@ public class TornadoProfilingInfoTask {
     @JsonProperty("TASK_COPY_OUT_SIZE_BYTES")
     public void setTaskCopyOutSizeBytes(final String taskCopyOutSizeBytes) {
         this.taskCopyOutSizeBytes = taskCopyOutSizeBytes;
+    }
+
+    @JsonProperty("TASK_COPY_IN_SIZE_BYTES")
+    public String getTaskCopyInSizeBytes() {
+        return this.taskCopyInSizeBytes;
+    }
+
+    @JsonProperty("TASK_COPY_IN_SIZE_BYTES")
+    public void setTaskCopyInSizeBytes(final String taskCopyInSizeBytes) {
+        this.taskCopyInSizeBytes = taskCopyInSizeBytes;
     }
 
     @JsonProperty("TASK_KERNEL_TIME")
@@ -90,9 +116,11 @@ public class TornadoProfilingInfoTask {
     @Override
     public String toString() {
         return "TornadoProfilingInfoTask{" +
-                "deviceID='" + deviceID + '\'' +
+                "method='" + method + '\'' +
+                ", deviceID='" + deviceID + '\'' +
                 ", device='" + device + '\'' +
                 ", taskCopyOutSizeBytes='" + taskCopyOutSizeBytes + '\'' +
+                ", taskCopyInSizeBytes='" + taskCopyInSizeBytes + '\'' +
                 ", taskKernelTime='" + taskKernelTime + '\'' +
                 ", taskCompileGraalTime='" + taskCompileGraalTime + '\'' +
                 ", taskCompileDriverTime='" + taskCompileDriverTime + '\'' +
