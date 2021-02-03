@@ -154,24 +154,15 @@ public final class NSGAIIHaierOptimizer implements Optimizer {
         }
         logger.info("Successfully retrieved a fresh view of the cluster from Yarn.");
 
-        devices.clear();
+        this.devices.clear();
         for (ClusterNode node : cluster.getNodes()) {
             logger.fine("Yarn detected cluster node: " + node);
             final ArrayList<HwResource>  availableResources = node.getAvailableResources();
             for (HwResource r : availableResources) {
                 logger.finer("\tYarn detected available hardware resource: " + r);
                 // If multiple GPUs or FPGAs of the same model are present, they should be represented as distinct
-                // hardware resource objects; so we allocate distinct HwResource instances for each of them.
-                if (r.getName().startsWith("yarn.io/gpu") || r.getName().startsWith("yarn.io/fpga")) {
-                    // FIXME(ckatsak): This distinction of concrete resources of the same type performed by HAIER
-                    //                 should not be necessary when YARN's integration with OpenCL has been completed.
-                    for (int i = 0; i < r.getValue(); i++) {
-                        logger.finer("\t\tCreating distinct hardware resource no" + (i + 1));
-                        devices.add(new HwResource(r, i));
-                    }
-                } else {
-                    devices.add(r);
-                }
+                // hardware resource objects; so a distinct HwResource instance is allocated for each of them.
+                this.devices.add(r);
             }
         }
 /*
