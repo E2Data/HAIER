@@ -20,11 +20,13 @@ import org.moeaframework.core.Solution;
 import org.moeaframework.core.variable.EncodingUtils;
 import org.moeaframework.problem.AbstractProblem;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.ResourceBundle;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 
@@ -113,12 +115,15 @@ public class NSGAIIHaierPlanning extends AbstractProblem {
      * @param jobGraph The initial Flink {@link JobGraph}.
      * @param policy The {@link OptimizationPolicy} to base upon the solution to the multi-objective optimization
      *               problem at hand.
+     * @throws IOException During {@link TornadoFeatureCache} initialization.
+     * @throws ClassNotFoundException During {@link TornadoFeatureCache} initialization.
      */
     public NSGAIIHaierPlanning(
             final List<HwResource> devices,
             final Model mlModel,
             final JobGraph jobGraph,
-            final OptimizationPolicy policy){
+            final OptimizationPolicy policy)
+            throws IOException, ClassNotFoundException {
         super(jobGraph.getNumberOfVertices(), policy.getNumberOfObjectives());
         this.devices = new ArrayList<>();
         this.devices.addAll(devices);
@@ -145,7 +150,12 @@ public class NSGAIIHaierPlanning extends AbstractProblem {
         }
 
         if (this.mlModel instanceof TornadoModel) {
-            this.featureCache = new TornadoFeatureCache(this.jobGraph, this.devices);
+            try {
+                this.featureCache = new TornadoFeatureCache(this.jobGraph, this.devices);
+            } catch (final IOException | ClassNotFoundException e) {
+                logger.log(Level.SEVERE, "Failed to initialize TornadoFeatureCache: " + e.getMessage(), e);
+                throw e;
+            }
         } else {
             this.featureCache = new DummyCSLabFeatureCache(this.jobGraph, this.devices);
         }

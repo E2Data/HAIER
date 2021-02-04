@@ -37,8 +37,11 @@ public class TornadoFeatureCache implements FeatureCache {
      *
      * @param jobGraph
      * @param devices
+     * @throws IOException
+     * @throws ClassNotFoundException
      */
-    public TornadoFeatureCache(final JobGraph jobGraph, final List<HwResource> devices) {
+    public TornadoFeatureCache(final JobGraph jobGraph, final List<HwResource> devices)
+            throws IOException, ClassNotFoundException {
         /*
          * FIXME(ckatsak):
          *  - Initialize a new TornadoFeatureExtractor
@@ -53,7 +56,7 @@ public class TornadoFeatureCache implements FeatureCache {
         } catch (final IOException | ClassNotFoundException e) {
             // FIXME(ckatsak): Bubble it up?
             logger.log(Level.SEVERE, e.getMessage(), e);
-            cacheEntryMapTemp = new HashMap<>();
+            throw e;
         }
         this.cacheEntryMap = cacheEntryMapTemp;
     }

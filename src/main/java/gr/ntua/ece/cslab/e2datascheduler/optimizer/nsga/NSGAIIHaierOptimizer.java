@@ -15,9 +15,11 @@ import org.moeaframework.Executor;
 import org.moeaframework.core.NondominatedPopulation;
 import org.moeaframework.core.Solution;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ResourceBundle;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 
@@ -114,7 +116,13 @@ public final class NSGAIIHaierOptimizer implements Optimizer {
         final NSGAIIParameters problemParams = (NSGAIIParameters) this.retrieveConfiguration(); // synchronized access
 
         // Construct the problem.
-        final NSGAIIHaierPlanning problem = new NSGAIIHaierPlanning(devices, mlModel, flinkJobGraph, policy);
+        final NSGAIIHaierPlanning problem;
+        try {
+            problem = new NSGAIIHaierPlanning(devices, mlModel, flinkJobGraph, policy);
+        } catch (final IOException | ClassNotFoundException e) {
+            logger.log(Level.SEVERE, "Failed to initialize the NSGAIIHaierPlanning: " + e.getMessage(), e);
+            return null; // E2dScheduler checks for nulls and tells SchedulerService to treat them as 500
+        }
 
         // Run NSGA-II.
         final NondominatedPopulation result = new Executor()

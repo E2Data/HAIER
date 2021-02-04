@@ -193,6 +193,10 @@ public class E2dScheduler {
         //return this.optimizer.optimize(jobGraph, policy, selectedModel);
         final List<HaierExecutionGraph> paretoHaierExecutionGraphs =
                 this.optimizer.optimize(jobGraph, policy, selectedModel);
+        if (null == paretoHaierExecutionGraphs) {
+            logger.severe("Failed to optimize JobGraph '" + jobGraph.getJobID() + "'");
+            return null; // SchedulerService will handle it as 500 INTERNAL SERVER ERROR
+        }
         return new SchedulingResult(this.pickPlan(jobGraph, policy, paretoHaierExecutionGraphs));
     }
 
