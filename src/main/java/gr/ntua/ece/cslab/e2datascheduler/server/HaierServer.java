@@ -1,5 +1,7 @@
 package gr.ntua.ece.cslab.e2datascheduler.server;
 
+import gr.ntua.ece.cslab.e2datascheduler.ws.CORSFilter;
+
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
@@ -21,6 +23,7 @@ public class HaierServer {
         resourceConfig.packages("gr.ntua.ece.cslab.e2datascheduler.ws");
         resourceConfig.register(MultiPartFeature.class);
         resourceConfig.register(JacksonFeature.class);
+        resourceConfig.register(new CORSFilter());
         ServletContainer servletContainer = new ServletContainer(resourceConfig);
         ServletHolder sh = new ServletHolder(servletContainer);
         Server server = new Server(HAIER_PORT);
