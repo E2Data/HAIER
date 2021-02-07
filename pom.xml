@@ -139,6 +139,17 @@
         </dependency>
 
 
+        <!-- Dependencies for loading use cases' UDFs via HaierUDFLoader would need to go here; e.g.: -->
+        <!-- https://mvnrepository.com/artifact/org.apache.flink/flink-streaming-java -->
+<!--        <dependency>-->
+<!--            <groupId>org.apache.flink</groupId>-->
+<!--            <artifactId>flink-streaming-java_2.12</artifactId>-->
+<!--            <version>${flink.version}</version>-->
+<!--            <scope>compile</scope>-->
+<!--        </dependency>-->
+        <!-- ... and they would need to go on until all of them are included.. -->
+
+
     </dependencies>
 
     <build>

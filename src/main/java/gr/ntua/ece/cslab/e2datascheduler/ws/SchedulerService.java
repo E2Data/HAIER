@@ -301,7 +301,8 @@ public class SchedulerService extends AbstractE2DataService {
                             "}" +
                         "}";
 
-        this.debuggingInspection(jobGraph); // FIXME(ckatsak) debugging logging
+//        this.oldDebuggingInspection(jobGraph); // FIXME(ckatsak) debugging logging
+        this.newDebuggingInspection(jobGraph); // FIXME(ckatsak) debugging logging
 
         final E2dScheduler.SchedulingResult result =
                 this.scheduler.schedule(jobGraph, OptimizationPolicy.parseJSON(policyStr));
@@ -347,8 +348,225 @@ public class SchedulerService extends AbstractE2DataService {
 
     // --------------------------------------------------------------------------------------------
 
+    private void newDebuggingInspection(final JobGraph jobGraph) {
+        jobGraphDebuggingInspection(jobGraph);
+        //udfDebuggingInspection(jobGraph);
+    }
 
-    private void debuggingInspection(final JobGraph jobGraph) {
+    private void jobGraphDebuggingInspection(final JobGraph jobGraph) {
+        logger.fine("\n\n===========================================\n\tJobGraph Debugging Inspection\n" +
+                "===========================================\n\n");
+        logger.finer("JVM Runtime Information:\n" + E2dScheduler.JVMRuntimeInfo());
+///        for (JobVertex vertex : jobGraph.getVerticesSortedTopologicallyFromSources()) {
+///            String str = "JobVertex: " + vertex.getID().toString() + ", " + vertex.getName() + "\n";
+///            HashMap confData = (HashMap) vertex.getConfiguration().toMap();
+///            if (confData.containsKey("driver.class")) {
+///                str += "CKATSAK: driver.class is \"" + confData.get("driver.class").toString() + "\"\n";
+///            }
+///            if (confData.containsKey("udf")) {
+///                str += "CKATSAK: found a UDF -- (getClass(): " + confData.get("udf").getClass() + ")\n";
+///                //if (confData.get("udf") instanceof byte[]) {
+///                //    byte[] udf = (byte[]) confData.get("udf");
+///                //    str += "CKATSAK: (udf size == " + udf.length + " bytes)\n";
+///                //}
+///                str += "CKATSAK: (UDF = " + confData.get("udf") + ")\n";
+///            }
+///            logger.finest(str);
+///        }
+
+        for (JobVertex vertex : jobGraph.getVerticesSortedTopologicallyFromSources()) {
+            // General information about the JobVertex at hand:
+            String inspectionMsg = "JobVertex: " + vertex.getID().toString() + "\n";
+            inspectionMsg += new GsonBuilder().setPrettyPrinting().create().toJson(vertex.getID()) + "\n";
+            inspectionMsg += "name: \"" + vertex.getName() + "\"\n";
+            final SlotSharingGroup ssg = vertex.getSlotSharingGroup();
+            final CoLocationGroup clg = vertex.getCoLocationGroup();
+            inspectionMsg += "SlotSharingGroup: " + (ssg != null ? ssg.toString() : null) +
+                    ";\nCoLocationGroup: " + (clg != null ? clg.toString() : null) + "\n";
+            // Create the `ConfigOption` objects to query the `Configuration` object:
+            final ConfigOption<String> driverClassOption = ConfigOptions
+                    .key("driver.class")
+                    .noDefaultValue();
+//            final ConfigOption<byte[]> udfOption = ConfigOptions
+//                    .key("udf")
+//                    .defaultValue(null);
+            // Use the `ConfigOption`s to query the `Configuration`:
+            if (vertex.getConfiguration().contains(driverClassOption)) {
+                final String driverClass = vertex.getConfiguration().getValue(driverClassOption);
+                inspectionMsg += "CKATSAK: driver.class is \"" + driverClass + "\"\n";
+            }
+            final byte[] udf = vertex.getConfiguration().getBytes("udf", null);
+            inspectionMsg += "CKATSAK: found a UDF (size = " + (udf != null ? udf.length : 0) + "):\n" + udf;
+            logger.finest(inspectionMsg);
+
+            inspectionMsg = "";
+            final HashMap<String, String> confData = (HashMap<String, String>) vertex.getConfiguration().toMap();
+            for (Map.Entry<String, String> entry : confData.entrySet()) {
+                inspectionMsg += "\"" + entry.getKey() + "\" : \"" + entry.getValue() + "\"\n";
+            }
+            logger.finest("Whole configuration:\n" + inspectionMsg);
+
+            logger.finest("(JobVertex-" + vertex.getID().toString() + ").getInvokableClassName(): " +
+                    vertex.getInvokableClassName() + "\n");
+
+
+            if (vertex instanceof InputOutputFormatVertex) {
+                inspectionMsg = "\n\nINPUTOUTPUTFORMATVERTEX FOUND!\n";
+                final InputOutputFormatVertex iofVertex = (InputOutputFormatVertex) vertex;
+
+                inspectionMsg += "\nOperatorIDPairs:\n";
+                for (OperatorIDPair operatorIDPair : iofVertex.getOperatorIDs()) {
+                    inspectionMsg += "\n - (generated):\t\t" + operatorIDPair.getGeneratedOperatorID();
+                    inspectionMsg += "\n - (user-defined):\t" + operatorIDPair.getUserDefinedOperatorID();
+                    inspectionMsg += "\n";
+
+                    inspectionMsg += "\t* " + iofVertex.getFormatDescription(operatorIDPair.getGeneratedOperatorID());
+                }
+                inspectionMsg += "\n";
+
+                for (JobVertex u : jobGraph.getVerticesSortedTopologicallyFromSources()) {
+                    for (OperatorIDPair operatorIDPair : u.getOperatorIDs()) {
+                        final OperatorID operatorID = operatorIDPair.getGeneratedOperatorID();
+                        final String fd = iofVertex.getFormatDescription(operatorID);
+                        if (null != fd) {
+                            inspectionMsg += "FOUND AN ENTRY:\t" + operatorID.toString() + " --> " + fd + "\n";
+                        }
+                    }
+                }
+
+                logger.finest(inspectionMsg + "\n\n");
+            }
+        }
+        HaierExecutionGraph.logOffloadability(jobGraph);
+
+
+        // ========================================================================================
+        //   vvv   User's JAR inspection/manipulation   vvv
+        // ========================================================================================
+
+        final List<org.apache.flink.core.fs.Path> jars = new ArrayList<>();
+        String userJarsPaths = "User Jars Paths:\n";
+        for (org.apache.flink.core.fs.Path p : jobGraph.getUserJars()) {
+            userJarsPaths += "- " + p.getName() + " @ " + p.getPath() + "\n";
+            jars.add(p);
+        }
+        logger.finest(userJarsPaths);
+        userJarsPaths = "User Jar BLOB Keys:\n";
+        for (PermanentBlobKey p : jobGraph.getUserJarBlobKeys()) {
+            userJarsPaths += "- " + p.toString() + "\n";
+        }
+        logger.finest(userJarsPaths);
+
+        logger.finest("jobGraph.hasUsercodeJarFiles() = " + jobGraph.hasUsercodeJarFiles());
+
+        String inspectionMsg = "Scanning JAR files for .class files:";
+        for (org.apache.flink.core.fs.Path path : jars) {
+            inspectionMsg += "\n* Class names in '" + path.getPath() + "':\n";
+            try {
+                final List<String> foundClasses = HaierUDFLoader.scanJarFileForClasses(new File(path.getPath()));
+                for (String className : foundClasses) {
+                    inspectionMsg += "\t- " + className + "\n";
+                }
+            } catch (IOException e) {
+                final StringWriter sw = new StringWriter();
+                inspectionMsg += "Error scanning for .class files in '" + path.getPath() + "' ... :\n";
+                e.printStackTrace(new PrintWriter(sw));
+                inspectionMsg += sw.toString() + "";
+            }
+        }
+        logger.finest(inspectionMsg + "\n");
+
+        // ========================================================================================
+        //   ^^^   User's JAR inspection/manipulation   ^^^
+        // ========================================================================================
+
+
+        // ========================================================================================
+        //   vvv   HDFS Path Extraction   vvv
+        // ========================================================================================
+        // TODO?
+        // ========================================================================================
+        //   ^^^   HDFS Path Extraction   ^^^
+        // ========================================================================================
+    }
+
+    private void udfDebuggingInspection(final JobGraph jobGraph) {
+        logger.fine("\n\n===========================================\n\tUDF Debugging Inspection\n" +
+                "===========================================\n\n");
+        logger.finer("JVM Runtime Information:\n" + E2dScheduler.JVMRuntimeInfo());
+
+        final HaierUDFLoader haierUDFLoader = new HaierUDFLoader(jobGraph, this.getClass().getClassLoader());
+        final List<Class<?>> mapClasses = haierUDFLoader.getAllUserDefinedMapFunctions();
+        final List<Class<?>> reduceClasses = haierUDFLoader.getAllUserDefinedReduceFunctions();
+
+        for (JobVertex vertex : jobGraph.getVerticesSortedTopologicallyFromSources()) {
+            // General information about the JobVertex at hand:
+            String inspectionMsg = "JobVertex: " + vertex.getID().toString() + "\n";
+            inspectionMsg += new GsonBuilder().setPrettyPrinting().create().toJson(vertex.getID()) + "\n";
+            inspectionMsg += "name: \"" + vertex.getName() + "\"\n";
+
+            final ConfigOption<String> driverClassOption = ConfigOptions
+                    .key("driver.class")
+                    .noDefaultValue();
+//            final ConfigOption<byte[]> udfOption = ConfigOptions
+//                    .key("udf")
+//                    .defaultValue(null);
+            // Use the `ConfigOption`s to query the `Configuration`:
+            if (vertex.getConfiguration().contains(driverClassOption)) {
+                final String driverClass = vertex.getConfiguration().getValue(driverClassOption);
+                inspectionMsg += "CKATSAK: driver.class is \"" + driverClass + "\"\n";
+            }
+            final byte[] udf = vertex.getConfiguration().getBytes("udf", null);
+            inspectionMsg += "CKATSAK: found a UDF (size = " + (udf != null ? udf.length : 0) + "):\n" + udf;
+            logger.finest(inspectionMsg);
+
+            // ====================================================================================
+            //   vvv   User's lambda deserialization   vvv
+            // ====================================================================================
+
+            inspectionMsg = "";
+            if (null != udf && vertex.getConfiguration().contains(driverClassOption)) {
+                final String driverClass = vertex.getConfiguration().getValue(driverClassOption);
+                if (driverClass.endsWith("MapDriver")) {
+                    final UserCodeObjectWrapper userCodeObjectWrapper;
+                    final MapFunction mapLambda;
+                    try (final ObjectInputStream objectInputStream =
+                                 new HaierObjectInputStreamOfFlinkUDF(new ByteArrayInputStream(udf), haierUDFLoader)
+                    ) {
+                        userCodeObjectWrapper = (UserCodeObjectWrapper) objectInputStream.readObject();
+                        inspectionMsg += "Successfully deserialized the UDF byte array: " + userCodeObjectWrapper + "\n";
+                        mapLambda = (MapFunction) userCodeObjectWrapper.getUserCodeObject();
+                        inspectionMsg += "Successfully retrieved the Map lambda from it: " + mapLambda + "\n";
+                    } catch (final IOException | ClassNotFoundException e) {
+                        final StringWriter sw = new StringWriter();
+                        inspectionMsg += "Error deserializing the UDF byte array... :\n";
+                        e.printStackTrace(new PrintWriter(sw));
+                        inspectionMsg += sw.toString();
+                    }
+                    logger.finest(inspectionMsg + "\n\n");
+                }
+            }
+
+            //this.udfFromJobGraph(vertex);
+
+            // ====================================================================================
+            //   ^^^   User's lambda deserialization   ^^^
+            // ====================================================================================
+        }
+
+        String inspectionMsg = "\n* User-defined classes implementing `MapFunction`:\n";
+        for (Class<?> clazz : haierUDFLoader.getAllUserDefinedMapFunctions()) {
+            inspectionMsg += "\t- " + clazz.toString() + "\n";
+        }
+        inspectionMsg += "\n* User-defined classes implementing `ReduceFunction`:\n";
+        for (Class<?> clazz : haierUDFLoader.getAllUserDefinedReduceFunctions()) {
+            inspectionMsg += "\t- " + clazz.toString() + "\n";
+        }
+        logger.finest(inspectionMsg);
+    }
+
+
+    private void oldDebuggingInspection(final JobGraph jobGraph) {
         logger.info("JVM Runtime Information:\n" + E2dScheduler.JVMRuntimeInfo());
 ///        for (JobVertex vertex : jobGraph.getVerticesSortedTopologicallyFromSources()) {
 ///            String str = "JobVertex: " + vertex.getID().toString() + ", " + vertex.getName() + "\n";
@@ -367,9 +585,9 @@ public class SchedulerService extends AbstractE2DataService {
 ///            logger.finest(str);
 ///        }
 
-        final HaierUDFLoader haierUDFLoader = new HaierUDFLoader(jobGraph, this.getClass().getClassLoader());
-        final List<Class<?>> mapClasses = haierUDFLoader.getAllUserDefinedMapFunctions();
-        final List<Class<?>> reduceClasses = haierUDFLoader.getAllUserDefinedReduceFunctions();
+        final HaierUDFLoader haierUDFLoader = new HaierUDFLoader(jobGraph, this.getClass().getClassLoader()); //
+        final List<Class<?>> mapClasses = haierUDFLoader.getAllUserDefinedMapFunctions();                     //
+        final List<Class<?>> reduceClasses = haierUDFLoader.getAllUserDefinedReduceFunctions();               //
 
         for (JobVertex vertex : jobGraph.getVerticesSortedTopologicallyFromSources()) {
             // General information about the JobVertex at hand:
@@ -410,30 +628,30 @@ public class SchedulerService extends AbstractE2DataService {
             //   vvv   User's lambda deserialization   vvv
             // ====================================================================================
 
-            inspectionMsg = "";
-            if (null != udf && vertex.getConfiguration().contains(driverClassOption)) {
-                final String driverClass = vertex.getConfiguration().getValue(driverClassOption);
-                if (driverClass.endsWith("MapDriver")) {
-                    final UserCodeObjectWrapper userCodeObjectWrapper;
-                    final MapFunction mapLambda;
-                    try (final ObjectInputStream objectInputStream =
-                                 new HaierObjectInputStreamOfFlinkUDF(new ByteArrayInputStream(udf), haierUDFLoader)
-                    ) {
-                        userCodeObjectWrapper = (UserCodeObjectWrapper) objectInputStream.readObject();
-                        inspectionMsg += "Successfully deserialized the UDF byte array: " + userCodeObjectWrapper + "\n";
-                        mapLambda = (MapFunction) userCodeObjectWrapper.getUserCodeObject();
-                        inspectionMsg += "Successfully retrieved the Map lambda from it: " + mapLambda + "\n";
-                    } catch (final IOException | ClassNotFoundException e) {
-                        final StringWriter sw = new StringWriter();
-                        inspectionMsg += "Error deserializing the UDF byte array... :\n";
-                        e.printStackTrace(new PrintWriter(sw));
-                        inspectionMsg += sw.toString();
-                    }
-                    logger.finest(inspectionMsg + "\n\n");
-                }
-            }
-
-            //this.udfFromJobGraph(vertex);
+            inspectionMsg = "";                                                                                //
+            if (null != udf && vertex.getConfiguration().contains(driverClassOption)) {                        //
+                final String driverClass = vertex.getConfiguration().getValue(driverClassOption);              //
+                if (driverClass.endsWith("MapDriver")) {                                                       //
+                    final UserCodeObjectWrapper userCodeObjectWrapper;                                         //
+                    final MapFunction mapLambda;                                                               //
+                    try (final ObjectInputStream objectInputStream =                                           //
+                                 new HaierObjectInputStreamOfFlinkUDF(new ByteArrayInputStream(udf), haierUDFLoader) //
+                    ) {                                                                                        //
+                        userCodeObjectWrapper = (UserCodeObjectWrapper) objectInputStream.readObject();        //
+                        inspectionMsg += "Successfully deserialized the UDF byte array: " + userCodeObjectWrapper + "\n"; //
+                        mapLambda = (MapFunction) userCodeObjectWrapper.getUserCodeObject();                   //
+                        inspectionMsg += "Successfully retrieved the Map lambda from it: " + mapLambda + "\n"; //
+                    } catch (final IOException | ClassNotFoundException e) {                                   //
+                        final StringWriter sw = new StringWriter();                                            //
+                        inspectionMsg += "Error deserializing the UDF byte array... :\n";                      //
+                        e.printStackTrace(new PrintWriter(sw));                                                //
+                        inspectionMsg += sw.toString();                                                        //
+                    }                                                                                          //
+                    logger.finest(inspectionMsg + "\n\n");                                                     //
+                }                                                                                              //
+            }                                                                                                  //
+                                                                                                               //
+            //this.udfFromJobGraph(vertex);                                                                    //
 
             // ====================================================================================
             //   ^^^   User's lambda deserialization   ^^^
@@ -504,15 +722,15 @@ public class SchedulerService extends AbstractE2DataService {
         }
         logger.finest(inspectionMsg + "\n");
 
-        inspectionMsg = "\n* User-defined classes implementing `MapFunction`:\n";
-        for (Class<?> clazz : haierUDFLoader.getAllUserDefinedMapFunctions()) {
-            inspectionMsg += "\t- " + clazz.toString() + "\n";
-        }
-        inspectionMsg += "\n* User-defined classes implementing `ReduceFunction`:\n";
-        for (Class<?> clazz : haierUDFLoader.getAllUserDefinedReduceFunctions()) {
-            inspectionMsg += "\t- " + clazz.toString() + "\n";
-        }
-        logger.finest(inspectionMsg);
+        inspectionMsg = "\n* User-defined classes implementing `MapFunction`:\n";     //
+        for (Class<?> clazz : haierUDFLoader.getAllUserDefinedMapFunctions()) {       //
+            inspectionMsg += "\t- " + clazz.toString() + "\n";                        //
+        }                                                                             //
+        inspectionMsg += "\n* User-defined classes implementing `ReduceFunction`:\n"; //
+        for (Class<?> clazz : haierUDFLoader.getAllUserDefinedReduceFunctions()) {    //
+            inspectionMsg += "\t- " + clazz.toString() + "\n";                        //
+        }                                                                             //
+        logger.finest(inspectionMsg);                                                 //
 
         // ========================================================================================
         //   ^^^   User's JAR inspection/manipulation   ^^^
