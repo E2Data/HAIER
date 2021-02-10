@@ -106,31 +106,37 @@ public class TornadoModel extends Model {
 
 
     /**
-     * <pre>FIXME(ckatsak): queryModel() implementation pending</pre>
-     *
-     * Make a prediction for the execution time of the provided {@link ScheduledJobVertex} (actually,
-     * its underlying {@link JobVertex}) on the given {@code device} (i.e., {@link HwResource}).
+     * Make a prediction for the given objective and the provided {@link ScheduledJobVertex} (actually,
+     * its underlying {@link JobVertex}) on the given {@code device} (i.e., {@link HwResource}), also
+     * using (to read or update) the provided {@link PredictionCache}.
      *
      * First, there is an attempt to retrieve the prediction from the local cache. If that fails, the
      * ML inference microservice is queried for all operators in the {@link JobVertex} at hand, the
      * partial results are combined into a single predicted value, which is also cached for future use.
      *
+     * @param objective          The objective to predict
+     * @param predictionCache    The {@link PredictionCache} to be used
      * @param device             The {@link HwResource} that the {@link ScheduledJobVertex} is assigned on
      * @param scheduledJobVertex The {@link ScheduledJobVertex} at hand
-     * @return The predicted execution time
+     * @return The predicted value of the objective
      */
-    private double predictExecTime(final HwResource device, final ScheduledJobVertex scheduledJobVertex) {
+    private double predictObjective(
+            final String objective,
+            final PredictionCache predictionCache,
+            final HwResource device,
+            final ScheduledJobVertex scheduledJobVertex
+    ) {
         double ret;
 
         try {
-            ret = this.execTimePredictionCache.getPrediction(scheduledJobVertex.getJobVertex(), device);
+            ret = predictionCache.getPrediction(scheduledJobVertex.getJobVertex(), device);
         } catch (final HaierCacheException e) {
             final double upstreamResponse = inferenceFromNetwork(
-                    "execTime",
+                    objective,
                     device,
                     scheduledJobVertex.getTornadoFeatures()
             );
-            this.execTimePredictionCache.update(
+            predictionCache.update(
                     scheduledJobVertex.getJobVertex(),
                     device,
                     upstreamResponse
@@ -138,7 +144,7 @@ public class TornadoModel extends Model {
 
             // NOTE(ckatsak): If it fails again, there must be some kind of bug around the PredictionCache logic.
             try {
-                ret = this.execTimePredictionCache.getPrediction(scheduledJobVertex.getJobVertex(), device);
+                ret = predictionCache.getPrediction(scheduledJobVertex.getJobVertex(), device);
                 if (ret != upstreamResponse) {
                     throw new HaierCacheException("ret != modelResponse");
                 }
@@ -151,18 +157,37 @@ public class TornadoModel extends Model {
         return ret;
     }
 
+
     /**
-     * FIXME(ckatsak): Implementation & Documentation
+     * Make a prediction for the execution time of the provided {@link ScheduledJobVertex} (actually,
+     * its underlying {@link JobVertex}) on the given {@code device} (i.e., {@link HwResource}).
      *
-     * @param device
-     * @param scheduledJobVertex
-     * @return
+     * First, there is an attempt to retrieve the prediction from the local cache. If that fails, the
+     * ML inference microservice is queried for all operators in the {@link JobVertex} at hand, the
+     * partial results are combined into a single predicted value, which is also cached for future use.
+     *
+     * @param device             The {@link HwResource} that the {@link ScheduledJobVertex} is assigned on
+     * @param scheduledJobVertex The {@link ScheduledJobVertex} at hand
+     * @return The predicted execution time
+     */
+    private double predictExecTime(final HwResource device, final ScheduledJobVertex scheduledJobVertex) {
+        return this.predictObjective("execTime", this.execTimePredictionCache, device, scheduledJobVertex);
+    }
+
+    /**
+     * Make a prediction for the power consumption of the provided {@link ScheduledJobVertex} (actually,
+     * its underlying {@link JobVertex}) on the given {@code device} (i.e., {@link HwResource}).
+     *
+     * First, there is an attempt to retrieve the prediction from the local cache. If that fails, the
+     * ML inference microservice is queried for all operators in the {@link JobVertex} at hand, the
+     * partial results are combined into a single predicted value, which is also cached for future use.
+     *
+     * @param device             The {@link HwResource} that the {@link ScheduledJobVertex} is assigned on
+     * @param scheduledJobVertex The {@link ScheduledJobVertex} at hand
+     * @return The predicted execution time
      */
     private double predictPowerCons(final HwResource device, final ScheduledJobVertex scheduledJobVertex) {
-        /*
-         * FIXME(ckatsak): Implementation
-         */
-        return -0.0d;
+        return this.predictObjective("powerCons", this.powerConsPredictionCache, device, scheduledJobVertex);
     }
 
 
