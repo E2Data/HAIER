@@ -17,7 +17,7 @@
         <jaxrs.version>2.1</jaxrs.version>
         <gson.version>2.8.5</gson.version>
         <moea.version>2.12</moea.version>
-        <jetty.version>9.3.27.v20190418</jetty.version>
+        <jetty.version>9.4.41.v20210516</jetty.version>
         <flink.version>1.11.1</flink.version>
     </properties>
 
